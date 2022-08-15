@@ -1,8 +1,8 @@
 import { prisma, logger, buildError, ModelRequest, ModelResponse } from '.'
 import * as bcrypt from 'bcrypt'
+import { Context } from './singleton'
 
-
-async function isUsernameAvailable(username: string) {
+export async function isUsernameAvailable(username: string): Promise<boolean> {
 	return await prisma.user.count({
 		where: {
 			username: username
@@ -10,44 +10,63 @@ async function isUsernameAvailable(username: string) {
 	}) === 0
 }
 
-function isValidUsernameChars(username: string) {
-	return /^[a-zA-Z0-9]+$/.test(username)
+export function isValidUsernameLength(username: string): boolean {
+	return username.length > 2 && username.length <= 16
 }
 
-interface RegisterParams {
+export function isValidUsernameChars(username: string): boolean {
+	return /^[a-zA-Z0-9\.\_]+$/.test(username)
+}
+
+export interface RegisterParams {
 	username: string,
 	password: string
 }
 
-export default async function registerUser(req: ModelRequest<RegisterParams>, res: ModelResponse) {
-	const body = req.body;
+class UsernameError extends Error {
+	constructor(title: string, description: string) {
+		super()
+		this.name = title;
+		this.message = description;
+	}
+}
+class InvalidCharacters extends UsernameError { }
+class InvalidLength extends UsernameError { }
+class NameTaken extends UsernameError { }
 
-	if (!isValidUsernameChars(body.username)) {
-		res.status(400).json(buildError('Invalid Characters', 'A username can only contain letters and numbers'))
-		return
+export default async function createUser(user: any, ctx?: Context) {
+	let len = user.username.length
+	if (!isValidUsernameLength(user.username)) {
+		throw new InvalidLength("Username Too Long", `A username can be a maximum of 16 characters long. Yours is ${len}`)
 	}
 
-	let len = body.username.length
-	if (len > 16) {
-		res.status(400).json(buildError('Too Long', `A username can be a maximum of 16 characters long. Yours is ${len}`))
-		return
+	if (!isValidUsernameChars(user.username)) {
+		throw new InvalidCharacters("Invalid Username", "A username can only contain letters, numbers, '_', and '.'");
 	}
 
-	if (!await isUsernameAvailable(body.username)) {
-		res.status(400).json(buildError('Username Taken', `The username '${body.username}' already exists`))
-		return
+	if (!await isUsernameAvailable(user.username)) {
+		throw new NameTaken("Name Taken", `The username '${user.username}' already exists`)
 	}
 
 	const salt = process.env.P_SALT as string;
-	const password = await bcrypt.hash(body.password, salt);
+	const password = await bcrypt.hash(user.password, salt);
 
-	const newUser = await prisma.user.create({
+	const newUser = await (ctx?.prisma ?? prisma).user.create({
 		data: {
-			username: body.username,
+			username: user.username,
 			password: password
 		}
 	})
 
-	res.send(newUser)
-	logger.info(`Created new user: ${newUser.username} (# ${newUser.id})`)
+	return newUser
+}
+
+export async function registerUser(req: ModelRequest<RegisterParams>, res: ModelResponse): Promise<void> {
+	try {
+		let user = await createUser(req.body);
+		logger.info(`Created new user: ${user.username} (# ${user.id})`)
+		res.send(user)
+	} catch (usernameError) {
+		res.status(400).send(usernameError)
+	}
 }

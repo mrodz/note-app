@@ -1,9 +1,8 @@
 import express, { Request, Response } from 'express'
 import winston from 'winston'
-import registerUser from './createUser'
+import createUser, { RegisterParams, registerUser } from './createUser'
 import { PrismaClient, User } from './generated/client'
 import 'dotenv/config'
-import fetch from 'node-fetch'
 
 const app = express()
 app.use(express.json())
@@ -13,23 +12,13 @@ export const port = 5000
 
 export const prisma = new PrismaClient()
 
-export const logger = winston.createLogger({
+const loggerConfig = {
 	level: 'info',
 	format: winston.format.json(),
-	// defaultMeta: { service: 'note-app' },
-	transports: [
-		new winston.transports.File({ filename: './logs/error.log', level: 'error' }),
-		new winston.transports.File({ filename: './logs/combined.log' })
-	]
-})
-
-if (process.env.NODE_ENV !== 'production') {
-	logger.add(new winston.transports.Console({
-		format: winston.format.simple()
-	}))
 }
 
-app.post('/api/register', registerUser)
+export const logger = winston.createLogger(loggerConfig)
+
 
 export type ApiError = {
 	title: string,
@@ -43,16 +32,43 @@ export function buildError(title: string, description: string): ApiError {
 	return { title: title, description: description }
 }
 
-app.listen(port, async () => {
-	// const response = await fetch('http://localhost:5000/api/register', {
-	// 	method: 'post',
-	// 	body: JSON.stringify(user),
-	// 	headers: { 'Content-Type': 'application/json' }
-	// });
+if (process.env.NODE_ENV !== 'production') {
+	logger.add(new winston.transports.Console({
+		format: winston.format.simple()
+	}))
+}
 
-	// const data = await response.json();
-	// console.log('.', data);
+SERVER: {
+	// do not submit logs or host the server when testing
+	if (process.env.NODE_ENV === 'test') break SERVER
 
-})
+	logger.add(new winston.transports.File({ filename: './logs/combined.log' }))
+	logger.add(new winston.transports.File({ filename: './logs/error.log' }))
+
+	app.post('/api/register', async (req: ModelRequest<RegisterParams>, res: ModelResponse) => {
+		const body = req.body;
+		try {
+			let user = await createUser(body);
+			logger.info(`Created new user: ${user.username} (# ${user.id})`)
+			res.send(user)
+		} catch (usernameError) {
+			res.status(400).send(usernameError)
+		}
+	})
+
+	app.listen(port, async () => {
+		console.log("server started " + port);
+
+		// const response = await fetch('http://localhost:5000/api/register', {
+		// 	method: 'post',
+		// 	body: JSON.stringify(user),
+		// 	headers: { 'Content-Type': 'application/json' }
+		// });
+
+		// const data = await response.json();
+		// console.log('.', data);
+
+	})
+}
 
 export default app;

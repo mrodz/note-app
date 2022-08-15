@@ -9,10 +9,10 @@ datasource db {
 }
 
 model User {
-  id        String   @id @unique @default(uuid())
-  username  String   @unique
+  id        String?   @unique @default(uuid())
+  username  String    @unique
   password  String
-  createdAt DateTime @default(now())
+  createdAt DateTime? @default(now())
 
   @@index([username])
 }
