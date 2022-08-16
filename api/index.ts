@@ -1,11 +1,13 @@
 import express, { Request, Response } from 'express'
+import cors from 'cors'
 import winston from 'winston'
-import createUser, { RegisterParams, registerUser } from './createUser'
-import { PrismaClient, User } from './generated/client'
+import createUser, { RegisterParams, registerUser, UsernameError } from './createUser'
+import { PrismaClient } from './generated/client'
 import 'dotenv/config'
 
 const app = express()
 app.use(express.json())
+app.use(cors())
 
 export type ExpressAppType = typeof app
 export const port = 5000
@@ -18,7 +20,6 @@ const loggerConfig = {
 }
 
 export const logger = winston.createLogger(loggerConfig)
-
 
 export type ApiError = {
 	title: string,
@@ -47,12 +48,13 @@ SERVER: {
 
 	app.post('/api/register', async (req: ModelRequest<RegisterParams>, res: ModelResponse) => {
 		const body = req.body;
+		// console.log(req)
 		try {
 			let user = await createUser(body);
 			logger.info(`Created new user: ${user.username} (# ${user.id})`)
 			res.send(user)
 		} catch (usernameError) {
-			res.status(400).send(usernameError)
+			res.status(usernameError instanceof UsernameError ? 400 : 500).send(usernameError)
 		}
 	})
 

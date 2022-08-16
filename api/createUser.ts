@@ -18,34 +18,56 @@ export function isValidUsernameChars(username: string): boolean {
 	return /^[a-zA-Z0-9\.\_]+$/.test(username)
 }
 
+export function isValidPasswordLength(password: string): boolean {
+	return password.length > 5 && password.length < 128
+}
+
+export function isValidPasswordChars(password: string): boolean {
+	return /^[a-zA-Z0-9~`!@#$%^&*()_\\+={[}\]\|:;"'<,>.\?\/-]+$/.test(password)
+}
+
 export interface RegisterParams {
 	username: string,
 	password: string
 }
 
-class UsernameError extends Error {
+export interface UsernameError {
+	name: string,
+	message: string
+}
+
+export class UsernameError {
 	constructor(title: string, description: string) {
-		super()
+		// super()
 		this.name = title;
 		this.message = description;
 	}
 }
-class InvalidCharacters extends UsernameError { }
-class InvalidLength extends UsernameError { }
-class NameTaken extends UsernameError { }
 
 export default async function createUser(user: any, ctx?: Context) {
+	console.log(user);
+
+
+
 	let len = user.username.length
 	if (!isValidUsernameLength(user.username)) {
-		throw new InvalidLength("Username Too Long", `A username can be a maximum of 16 characters long. Yours is ${len}`)
+		throw new UsernameError("Wrong length: Username", `A username must fit the range (3-16). Yours is ${len}`)
 	}
 
 	if (!isValidUsernameChars(user.username)) {
-		throw new InvalidCharacters("Invalid Username", "A username can only contain letters, numbers, '_', and '.'");
+		throw new UsernameError("Invalid Username", "A username can only contain letters, numbers, '_', and '.'");
+	}
+
+	if (!isValidPasswordLength(user.password)) {
+		throw new UsernameError("Wrong length: Password", 'A password must fit the range (5-127)')
+	}
+
+	if (!isValidPasswordChars(user.password)) {
+		throw new UsernameError("Invalid Password", "A password can only contain Alphanumeric Symbols and a select few others.");
 	}
 
 	if (!await isUsernameAvailable(user.username)) {
-		throw new NameTaken("Name Taken", `The username '${user.username}' already exists`)
+		throw new UsernameError(`Name Taken: ${user.username}`, `The username '${user.username}' already exists`)
 	}
 
 	const salt = process.env.P_SALT as string;

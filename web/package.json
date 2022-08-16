@@ -3,10 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.10.0",
+    "@emotion/styled": "^11.10.0",
+    "@mui/lab": "^5.0.0-alpha.94",
+    "@mui/material": "^5.10.0",
+    "@types/node": "^18.7.3",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
     "cra-template": "1.2.0",
+    "node-fetch": "^2.6.7",
+    "notistack": "^2.0.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
+    "react-hook-form": "^7.34.2",
+    "react-router": "^6.3.0",
+    "react-router-dom": "^6.3.0",
+    "react-scripts": "5.0.1",
+    "sass": "^1.54.4",
+    "typescript": "^4.7.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -31,5 +45,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.12"
   }
 }

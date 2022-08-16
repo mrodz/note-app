@@ -1,0 +1,54 @@
+@use 'sass:math';
+
+$padding: 2rem;
+
+
+.Login-root {
+	display: flex;
+	flex-direction: column;
+	margin: auto;
+	// max-width: max-content;
+}
+
+.-super-Login-Card {
+	display: flex;
+	align-content: center;
+	min-height: 100vh;
+}
+
+.Login-Card {
+	width: fit-content;
+	padding-left: 3rem;
+	padding-left: $padding * 2.5;
+	padding-right: $padding * 2.5;
+	padding-top: $padding * 2;
+	padding-bottom: $padding * 2;
+	margin: auto;
+}
+
+.Login-usernameform,
+.Login-passwordform {
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: math.div($padding, 3);
+	margin-bottom: math.div($padding, 3);
+	width: 100%;
+	& > div {
+		width: 100%;
+
+		& > p {
+			max-width: fit-content;
+		}
+	}
+}
+
+.Login-noaccount {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+
+	& > h6 {
+		margin-top: math.div($padding, 3);
+		margin-bottom: math.div($padding, 3);
+	}
+}
