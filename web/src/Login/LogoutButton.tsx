@@ -10,7 +10,7 @@ export default function LogoutButton() {
 	const [count, setCount] = React.useState(1)
 
 	const user = useContext(Context)
-	console.log(user)
+	// console.log(user)
 
 	async function logoutUser(_key: number) {
 		setLoading(true)
@@ -52,7 +52,7 @@ export default function LogoutButton() {
 		<Button
 			disabled={!user?.sessionId}
 			{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
-			onClick={() => throttle(logoutUser(count), 5_000)}>
+			onClick={() => throttle(() => logoutUser(count), 1_000)}>
 			Log Out
 		</Button>
 	)
