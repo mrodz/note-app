@@ -13,6 +13,14 @@ model User {
   username  String    @unique
   password  String
   createdAt DateTime? @default(now())
+  Session   Session?
+  // Session   Session?
 
   @@index([username])
+}
+
+model Session {
+  id     String  @unique @default(uuid())
+  userId String? @unique
+  User   User?   @relation(fields: [userId], references: [id])
 }

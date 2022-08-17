@@ -1,9 +1,11 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import winston from 'winston'
-import createUser, { RegisterParams, registerUser, UsernameError } from './createUser'
+import createUser, { RegisterParams } from './createUser'
 import { PrismaClient } from './generated/client'
 import 'dotenv/config'
+import loginUser, { LoginParams } from './loginUser'
+import fetch from 'node-fetch'
 
 const app = express()
 app.use(express.json())
@@ -33,6 +35,18 @@ export function buildError(title: string, description: string): ApiError {
 	return { title: title, description: description }
 }
 
+export interface CaughtApiException {
+	name: string,
+	message: string
+}
+
+export class CaughtApiException {
+	constructor(title: string, description?: string) {
+		this.name = title;
+		this.message = description ?? 'None';
+	}
+}
+
 if (process.env.NODE_ENV !== 'production') {
 	logger.add(new winston.transports.Console({
 		format: winston.format.simple()
@@ -54,22 +68,42 @@ SERVER: {
 			logger.info(`Created new user: ${user.username} (# ${user.id})`)
 			res.send(user)
 		} catch (usernameError) {
-			res.status(usernameError instanceof UsernameError ? 400 : 500).send(usernameError)
+			console.log(usernameError);
+
+			res.status(usernameError instanceof CaughtApiException ? 400 : 500).send(usernameError)
+		}
+	})
+
+	app.post('/api/login', async (req: ModelRequest<LoginParams>, res: ModelResponse) => {
+		const body = req.body;
+
+		try {
+			let user = await loginUser(body.username, body.password);
+			// console.log(user);
+		} catch (loginError) {
+			console.error(loginError)
+			res.status(loginError instanceof CaughtApiException ? 400 : 500).send(loginError)
 		}
 	})
 
 	app.listen(port, async () => {
+		// await prisma.user.deleteMany()
+
 		console.log("server started " + port);
 
-		// const response = await fetch('http://localhost:5000/api/register', {
-		// 	method: 'post',
-		// 	body: JSON.stringify(user),
-		// 	headers: { 'Content-Type': 'application/json' }
-		// });
+		const user = {
+			username: "ymilosevic",
+			password: "Niblet16"
+		}
 
-		// const data = await response.json();
-		// console.log('.', data);
+		const response = await fetch('http://localhost:5000/api/login', {
+			method: 'post',
+			body: JSON.stringify(user),
+			headers: { 'Content-Type': 'application/json' }
+		});
 
+		const data = await response.json();
+		console.log('$', data, response.status);
 	})
 }
 

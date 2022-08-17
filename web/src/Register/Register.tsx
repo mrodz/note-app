@@ -1,8 +1,8 @@
-import { Card, TextField, Typography, ThemeProvider, FormControl, Snackbar } from "@mui/material";
+import { Card, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
 import { LoadingButton as Button } from "@mui/lab"
-import { useEffect, useRef, useState } from "react";
-import { LoginTheme } from "../Login/Login";
-import { SnackbarProvider, useSnackbar } from "notistack"
+import { useRef, useState } from "react";
+// import { LoginTheme } from "../Login/Login";
+import { useSnackbar } from "notistack"
 import fetch from "node-fetch"
 
 type SetStateFunction<T> = React.Dispatch<React.SetStateAction<T>>
@@ -15,7 +15,8 @@ const USERNAME_MESSAGES = {
 	[-1]: "Enter a username (Alphanumeric Characters, '.', '_')",
 	0: "Looks good so far!",
 	1: "Bad length! Must be between 3-16 characters",
-	2: "Username can only contain numbers, letters, '_', and '.'"
+	2: "Username can only contain numbers, letters, '_', and '.'",
+	3: 'Username already exists'
 }
 
 const PASSWORD_MESSAGES = {
@@ -44,11 +45,23 @@ function validPasswordLength(password: string) {
 }
 
 function validPasswordChars(password: string) {
-	return /^[a-zA-Z0-9~`!@#$%^&*()_\\+={[}\]\|:;"'<,>.\?\/-]+$/.test(password)
+	return /^[a-zA-Z0-9~`!@#$%^&*()_\\+={[}\]|:;"'<,>.?/-]+$/.test(password)
+}
+
+export function areUsernameAndPasswordValid(username, password) {
+	return validUsernameLength(username)
+		&& validUsernameChars(username)
+		&& validPasswordLength(password)
+		&& validPasswordChars(password)
+
+}
+
+function isFormValid(username, password, passwordConfirm) {
+	return areUsernameAndPasswordValid(username, password) && password === passwordConfirm
 }
 
 let throttlePause;
-const throttle = (callback, time) => {
+export const throttle = (callback, time) => {
 	if (throttlePause) return;
 	callback();
 	throttlePause = true;
@@ -59,21 +72,20 @@ const throttle = (callback, time) => {
 };
 
 export default function Login() {
-	const [username, setUsername] = useState<[string, number]>(['', -1]);
-	const [password, setPassword] = useState<[string, number]>(['', -1]);
-	const [passwordConfirm, setPasswordConfirm] = useState<[string, number]>(['', -1]);
+	const [username, setUsername] = useState<[string, keyof typeof USERNAME_MESSAGES]>(['', -1]);
+	const [password, setPassword] = useState<[string, keyof typeof PASSWORD_MESSAGES]>(['', -1]);
+	const [passwordConfirm, setPasswordConfirm] = useState<[string, keyof typeof PASSWORD_CONFIRM_MESSAGES]>(['', -1]);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [count, setCount] = useState(1)
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
 	const a = username[0], b = password[0], c = passwordConfirm[0];
-	// const Notification = NotificationSnackbar();
 
 	let usernameRef = useRef(null),
 		passwordRef = useRef(null),
 		passwordConfirmRef = useRef(null);
 
-	const sendRegisterRequest = (_key: number, username: string, password: string, passwordConfirm: string, setLoading: SetStateFunction<boolean>, ...refs) => async () => {
+	const sendRegisterRequest = (_key: number, username: string, password: string, passwordConfirm: string) => async () => {
 		setLoading(true)
 
 		setCount(count + 1)
@@ -82,7 +94,6 @@ export default function Login() {
 
 			const response = await fetch('http://localhost:5000/api/register', {
 				method: 'post',
-				// mode: 'no-cors',
 				body: JSON.stringify({
 					username: username,
 					password: password
@@ -91,16 +102,19 @@ export default function Login() {
 			})
 
 			const data = await response.json();
-
 			const success = 'username' in data;
 
-			if (success) closeSnackbar()
+			if (success)
+				closeSnackbar()
+			else if (/^Name Taken/.test(data.name))
+				setUsername([username, 3])
+
 
 			enqueueSnackbar(success ? "Success!" : data.name, {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: _key,
-				action: () => <Button onClick={() => { closeSnackbar(_key) }}>x</Button>
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
 
 			})
 
@@ -108,8 +122,8 @@ export default function Login() {
 		} finally {
 			passwordRef.current.value = ''
 			passwordConfirmRef.current.value = ''
-			setPassword(['', 0])
-			setPasswordConfirm(['', 0])
+			setPassword(['', -1])
+			setPasswordConfirm(['', -1])
 
 			setLoading(false)
 		}
@@ -119,55 +133,47 @@ export default function Login() {
 	return (
 		<div className="Login-root">
 			<div className="-super-Login-Card">
-				<ThemeProvider theme={LoginTheme}>
-					<Card className="Login-Card">
-						<Typography variant="h4" color="primary" mb="1rem">Sign Up &mdash;</Typography>
-						<FormControl sx={{ width: '100%' }}>
-							<div className="Login-usernameform">
-								<TextField error={username[1] > 0} label="Username" inputRef={usernameRef}
-									helperText={USERNAME_MESSAGES[username[1]]}
-									color="secondary" onChange={_ => onType(usernameRef.current.value, setUsername, () => {
-										let _username = usernameRef.current.value;
+				<Card className="Login-Card">
+					<Typography variant="h4" color="primary" mb="1rem">Sign Up &mdash;</Typography>
+					<FormControl sx={{ width: '100%' }}>
+						<div className="Login-usernameform">
+							<TextField error={username[1] > 0} label="Username" inputRef={usernameRef}
+								helperText={USERNAME_MESSAGES[username[1]]}
+								color="secondary" onChange={_ => onType(usernameRef.current.value, setUsername, () => {
+									let _username = usernameRef.current.value;
 
-										if (!validUsernameLength(_username)) return 1
-										if (!validUsernameChars(_username)) return 2
-										return 0
-									})}
-								/>
-							</div>
-							<div className="Login-passwordform">
-								<TextField error={password[1] > 0} label="Password" inputRef={passwordRef}
-									helperText={PASSWORD_MESSAGES[password[1]]} type="password"
-									color="secondary" onChange={_ => onType(passwordRef.current.value, setPassword, () => {
-										let _password = passwordRef.current.value;
+									if (!validUsernameLength(_username)) return 1
+									if (!validUsernameChars(_username)) return 2
+									return 0
+								})}
+							/>
+						</div>
+						<div className="Login-passwordform">
+							<TextField error={password[1] > 0} label="Password" inputRef={passwordRef}
+								helperText={PASSWORD_MESSAGES[password[1]]} type="password"
+								color="secondary" onChange={_ => onType(passwordRef.current.value, setPassword, () => {
+									let _password = passwordRef.current.value;
 
-										if (!validPasswordLength(_password)) return 1
-										if (!validPasswordChars(_password)) return 2
-										return 0
-									})}
-								/>
-							</div>
-							<div className="Login-passwordform">
-								<TextField error={passwordConfirm[1] > 0} label="Confirm Password" inputRef={passwordConfirmRef}
-									helperText={PASSWORD_CONFIRM_MESSAGES[passwordConfirm[1]]} type="password"
+									if (!validPasswordLength(_password)) return 1
+									if (!validPasswordChars(_password)) return 2
+									return 0
+								})}
+							/>
+						</div>
+						<div className="Login-passwordform">
+							<TextField error={passwordConfirm[1] > 0} label="Confirm Password" inputRef={passwordConfirmRef}
+								helperText={PASSWORD_CONFIRM_MESSAGES[passwordConfirm[1]]} type="password"
 
-									color="secondary" onChange={_ => onType(passwordConfirmRef.current.value, setPasswordConfirm, () => {
-										return passwordRef.current.value === passwordConfirmRef.current.value && passwordConfirmRef.current.value !== '' ? 0 : 1
-									})}
-								/>
-							</div>
-						</FormControl>
-						<Button disabled={(() => {
-							if (validUsernameLength(a) && validUsernameChars(a) && validPasswordLength(b) && validPasswordChars(b) && passwordRef.current.value === passwordConfirmRef.current.value) {
-								return false
-							}
-							return true
-						})()} {...loading ? { loading } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }} onClick={() => throttle(sendRegisterRequest(count, a, b, c, setLoading, passwordRef, passwordConfirmRef), 5_000)}>
-							Sign Up
-						</Button>
-					</Card>
-				</ThemeProvider>
-				{/* <NotificationSnackbar /> */}
+								color="secondary" onChange={_ => onType(passwordConfirmRef.current.value, setPasswordConfirm, () => {
+									return passwordRef.current.value === passwordConfirmRef.current.value && passwordConfirmRef.current.value !== '' ? 0 : 1
+								})}
+							/>
+						</div>
+					</FormControl>
+					<Button disabled={!isFormValid(a, b, c)} {...loading ? { loading } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }} onClick={() => throttle(sendRegisterRequest(count, a, b, c), 5_000)}>
+						Sign Up
+					</Button>
+				</Card>
 			</div>
 		</div>
 	)

@@ -1,4 +1,4 @@
-import { prisma, logger, buildError, ModelRequest, ModelResponse } from '.'
+import { prisma, logger, ModelRequest, ModelResponse, CaughtApiException } from '.'
 import * as bcrypt from 'bcrypt'
 import { Context } from './singleton'
 
@@ -30,44 +30,32 @@ export interface RegisterParams {
 	username: string,
 	password: string
 }
-
-export interface UsernameError {
-	name: string,
-	message: string
-}
-
-export class UsernameError {
-	constructor(title: string, description: string) {
-		// super()
-		this.name = title;
-		this.message = description;
-	}
-}
+// export class UserCreationError extends CaughtApiException {
+// 	constructor(title: string, description: string) {
+// 		super(title, description)
+// 	}
+// }
 
 export default async function createUser(user: any, ctx?: Context) {
-	console.log(user);
-
-
-
 	let len = user.username.length
 	if (!isValidUsernameLength(user.username)) {
-		throw new UsernameError("Wrong length: Username", `A username must fit the range (3-16). Yours is ${len}`)
+		throw new CaughtApiException("Wrong length: Username", `A username must fit the range (3-16). Yours is ${len}`)
 	}
 
 	if (!isValidUsernameChars(user.username)) {
-		throw new UsernameError("Invalid Username", "A username can only contain letters, numbers, '_', and '.'");
+		throw new CaughtApiException("Invalid Username", "A username can only contain letters, numbers, '_', and '.'");
 	}
 
 	if (!isValidPasswordLength(user.password)) {
-		throw new UsernameError("Wrong length: Password", 'A password must fit the range (5-127)')
+		throw new CaughtApiException("Wrong length: Password", 'A password must fit the range (5-127)')
 	}
 
 	if (!isValidPasswordChars(user.password)) {
-		throw new UsernameError("Invalid Password", "A password can only contain Alphanumeric Symbols and a select few others.");
+		throw new CaughtApiException("Invalid Password", "A password can only contain Alphanumeric Symbols and a select few others.");
 	}
 
 	if (!await isUsernameAvailable(user.username)) {
-		throw new UsernameError(`Name Taken: ${user.username}`, `The username '${user.username}' already exists`)
+		throw new CaughtApiException(`Name Taken: ${user.username}`, `The username '${user.username}' already exists`)
 	}
 
 	const salt = process.env.P_SALT as string;
@@ -76,7 +64,7 @@ export default async function createUser(user: any, ctx?: Context) {
 	const newUser = await (ctx?.prisma ?? prisma).user.create({
 		data: {
 			username: user.username,
-			password: password
+			password: password,
 		}
 	})
 
