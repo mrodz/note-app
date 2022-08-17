@@ -87,11 +87,9 @@ export default function Login() {
 
 	const sendRegisterRequest = (_key: number, username: string, password: string, passwordConfirm: string) => async () => {
 		setLoading(true)
-
 		setCount(count + 1)
-		try {
-			if ([username, password, passwordConfirm].some(str => str === '')) return; // temporary
 
+		try {
 			const response = await fetch('http://localhost:5000/api/register', {
 				method: 'post',
 				body: JSON.stringify({
@@ -102,18 +100,17 @@ export default function Login() {
 			})
 
 			const data = await response.json();
-			const success = 'username' in data;
+			const success = response.status === 200;
 
 			if (success)
 				closeSnackbar()
 			else if (/^Name Taken/.test(data.name))
 				setUsername([username, 3])
 
-
 			enqueueSnackbar(success ? "Success!" : data.name, {
 				variant: success ? 'success' : 'error',
 				persist: !success,
-				key: _key,
+				key: 'REGISTER_' + _key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
 
 			})

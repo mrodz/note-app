@@ -1,20 +1,9 @@
 import { Button, Card, createTheme, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useState, useRef } from "react";
+import { useState, useRef, useContext } from "react";
+import { readFromLocalStorage, writeToLocalStorage } from "../AccountContext";
 import { areUsernameAndPasswordValid, throttle } from "../Register/Register";
 import './Login.scss'
-
-
-// export const LoginTheme = createTheme({
-// 	palette: {
-// 		primary: {
-// 			main: '#d68018'
-// 		},
-// 		secondary: {
-// 			main: '#3b3740'
-// 		}
-// 	}
-// })
 
 export default function Login() {
 	const [username, setUsername] = useState<string>('');
@@ -28,19 +17,57 @@ export default function Login() {
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
-	const sendLoginRequest = (_key: number, username: string, password: string) => () => {
-		if (!areUsernameAndPasswordValid(username, password)) {
-			enqueueSnackbar("Error! Wrong sign-in information.", {
-				variant: 'error',
-				persist: true,
-				key: _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+	const sendLoginRequest = (_key: number, username: string, password: string) => async () => {
+		setLoading(true)
+		setCount(count + 1)
 
+		try {
+			if (!areUsernameAndPasswordValid(username, password)) {
+				enqueueSnackbar("Error! Wrong sign-in information.", {
+					variant: 'error',
+					persist: true,
+					key: 'LOGIN_' + _key,
+					action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+				})
+			}
+
+			const response = await fetch('http://localhost:5000/api/login', {
+				method: 'post',
+				body: JSON.stringify({
+					username: username,
+					password: password
+				}),
+				headers: { 'Content-Type': 'application/json' }
 			})
+
+			const data = await response.json()
+			const success = response.status === 200
+
+			// console.log(data);
+			// writeToLocalStorage(data)
+
+			if (success) {
+				const loginEvent = new CustomEvent('on:account-login', {
+					detail: data
+				})
+				document.dispatchEvent(loginEvent)
+
+				// console.log('##', data)
+				closeSnackbar()
+			}
+			enqueueSnackbar(success ? "Success!" : data?.name ?? data?.title, {
+				variant: success ? 'success' : 'error',
+				persist: !success,
+				key: 'LOGIN_' + _key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+			})
+		} finally {
+			passwordRef.current.value = ""
+			setPassword('')
+			setLoading(false)
 		}
 
-		console.log(username, password);
-		setCount(count + 1)
+
 	}
 
 	return (
@@ -64,12 +91,15 @@ export default function Login() {
 					</FormControl>
 					<Button
 						disabled={username === '' || password === ''}
-						{...loading ? { loading } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
+						{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
 						onClick={() => throttle(sendLoginRequest(count, username, password), 5_000)}>
-						Sign Up
+						Sign In
 					</Button>
 				</Card>
 			</div>
+			{
+				JSON.stringify(readFromLocalStorage())
+			}
 		</div>
 	)
 }
