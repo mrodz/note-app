@@ -1,9 +1,10 @@
-import { Card, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
+import { Card, TextField, Typography, ThemeProvider, FormControl, Tooltip } from "@mui/material";
 import { LoadingButton as Button } from "@mui/lab"
 import { useRef, useState } from "react";
 // import { LoginTheme } from "../Login/Login";
 import { useSnackbar } from "notistack"
 import fetch from "node-fetch"
+import { ThrottledCallback } from "../App";
 
 type SetStateFunction<T> = React.Dispatch<React.SetStateAction<T>>
 
@@ -60,16 +61,16 @@ function isFormValid(username, password, passwordConfirm) {
 	return areUsernameAndPasswordValid(username, password) && password === passwordConfirm
 }
 
-let throttlePause;
-export const throttle = (callback, time) => {
-	if (throttlePause) return;
-	callback();
-	throttlePause = true;
+// let throttlePause;
+// export const throttle = (callback, time) => {
+// 	if (throttlePause) return;
+// 	callback();
+// 	throttlePause = true;
 
-	setTimeout(() => {
-		throttlePause = false;
-	}, time);
-};
+// 	setTimeout(() => {
+// 		throttlePause = false;
+// 	}, time);
+// };
 
 export default function Login() {
 	const [username, setUsername] = useState<[string, keyof typeof USERNAME_MESSAGES]>(['', -1]);
@@ -85,7 +86,7 @@ export default function Login() {
 		passwordRef = useRef(null),
 		passwordConfirmRef = useRef(null);
 
-	const sendRegisterRequest = (_key: number, username: string, password: string, passwordConfirm: string) => async () => {
+	const sendRegisterRequest = async (_key: number, username: string, password: string, passwordConfirm: string) => {
 		setLoading(true)
 		setCount(count + 1)
 
@@ -111,7 +112,7 @@ export default function Login() {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: 'REGISTER_' + _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('REGISTER_' + _key) }}>{"×"}</Button>
 
 			})
 
@@ -126,6 +127,7 @@ export default function Login() {
 		}
 	}
 
+	const registerCallback = useRef(new ThrottledCallback(sendRegisterRequest, 5_000))
 
 	return (
 		<div className="Login-root">
@@ -167,9 +169,13 @@ export default function Login() {
 							/>
 						</div>
 					</FormControl>
-					<Button disabled={!isFormValid(a, b, c)} {...loading ? { loading } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }} onClick={() => throttle(sendRegisterRequest(count, a, b, c), 5_000)}>
-						Sign Up
-					</Button>
+					<Tooltip title={registerCallback.current.throttlePause ? "Please wait before trying this again." : "Register!"}>
+						<span>
+							<Button disabled={!isFormValid(a, b, c)} {...loading ? { loading } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }} onClick={() => registerCallback.current.call(count, a, b, c)}>
+								Sign Up
+							</Button>
+						</span>
+					</Tooltip>
 				</Card>
 			</div>
 		</div>

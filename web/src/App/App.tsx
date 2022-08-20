@@ -3,12 +3,12 @@ import Landing from '../Landing/Landing';
 import NotFound from '../NotFound/NotFound';
 import Login from '../Login/Login';
 import Register from '../Register/Register'
-import { useSnackbar } from 'notistack'
 import './App.css';
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material';
-import LogoutButton from '../Login/LogoutButton';
-import { AccountContext, Context } from '../AccountContext';
+import LogoutButton from './LogoutButton';
+import { Context, LocalStorageSessionInfo } from '../AccountContext';
+import AppHeading from './AppHeading';
 
 function App() {
 
@@ -23,14 +23,12 @@ function App() {
     }
   })
 
-  const user = useContext(Context)
+  const user = useContext<LocalStorageSessionInfo>(Context)
 
   return (
     <ThemeProvider theme={LoginTheme}>
       <div className="App">
-        <header className='App-header'>
-          <LogoutButton />
-        </header>
+        <AppHeading user={user} bgColor={LoginTheme.palette.primary.main} />
         <Routes>
           <Route path='*' element={<NotFound />} />
           <Route path='/' element={<Landing />} />

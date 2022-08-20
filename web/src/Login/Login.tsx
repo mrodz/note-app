@@ -1,8 +1,9 @@
-import { Button, Card, createTheme, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
+import { Button, Card, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useState, useRef, useContext } from "react";
-import { readFromLocalStorage, writeToLocalStorage } from "../AccountContext";
-import { areUsernameAndPasswordValid, throttle } from "../Register/Register";
+import { useState, useRef } from "react";
+import { readFromLocalStorage } from "../AccountContext";
+import { ThrottledCallback } from "../App";
+import { areUsernameAndPasswordValid } from "../Register/Register";
 import './Login.scss'
 
 export default function Login() {
@@ -17,7 +18,7 @@ export default function Login() {
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
-	const sendLoginRequest = (_key: number, username: string, password: string) => async () => {
+	const sendLoginRequest = async (_key: number, username: string, password: string) => {
 		setLoading(true)
 		setCount(count + 1)
 
@@ -27,8 +28,10 @@ export default function Login() {
 					variant: 'error',
 					persist: true,
 					key: 'LOGIN_' + _key,
-					action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+					action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + _key) }}>{"×"}</Button>
 				})
+
+				return
 			}
 
 			const response = await fetch('http://localhost:5000/api/login', {
@@ -43,32 +46,29 @@ export default function Login() {
 			const data = await response.json()
 			const success = response.status === 200
 
-			// console.log(data);
-			// writeToLocalStorage(data)
-
 			if (success) {
 				const loginEvent = new CustomEvent('on:account-login', {
 					detail: data
 				})
-				document.dispatchEvent(loginEvent)
 
-				// console.log('##', data)
+				document.dispatchEvent(loginEvent)
 				closeSnackbar()
 			}
+
 			enqueueSnackbar(success ? "Success!" : data?.name ?? data?.title, {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: 'LOGIN_' + _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + _key) }}>{"×"}</Button>
 			})
 		} finally {
 			passwordRef.current.value = ""
 			setPassword('')
 			setLoading(false)
 		}
-
-
 	}
+
+	const loginButton = useRef(new ThrottledCallback(sendLoginRequest, 5_000))
 
 	return (
 		<div className="Login-root">
@@ -92,7 +92,7 @@ export default function Login() {
 					<Button
 						disabled={username === '' || password === ''}
 						{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
-						onClick={() => throttle(sendLoginRequest(count, username, password), 5_000)}>
+						onClick={() => loginButton.current.call(count, username, password)}>
 						Sign In
 					</Button>
 				</Card>

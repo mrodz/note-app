@@ -1,8 +1,8 @@
-import React, { useContext } from 'react'
+import React, { useContext, useRef } from 'react'
 import { useSnackbar } from 'notistack';
 import { Button } from '@mui/material';
-import { throttle } from '../Register/Register';
 import { Context } from '../AccountContext';
+import { ThrottledCallback } from '.';
 
 export default function LogoutButton() {
 	const [loading, setLoading] = React.useState(false);
@@ -10,7 +10,6 @@ export default function LogoutButton() {
 	const [count, setCount] = React.useState(1)
 
 	const user = useContext(Context)
-	// console.log(user)
 
 	async function logoutUser(_key: number) {
 		setLoading(true)
@@ -40,19 +39,20 @@ export default function LogoutButton() {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: 'LOGOUT_BUTTON_' + _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(_key) }}>{"×"}</Button>
-
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGOUT_BUTTON_' + _key) }}>{"×"}</Button>
 			})
 		} finally {
 			setLoading(false)
 		}
 	}
 
+	const logoutButton = useRef(new ThrottledCallback(logoutUser, 5_000))
+
 	return (
 		<Button
 			disabled={!user?.sessionId}
-			{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
-			onClick={() => throttle(() => logoutUser(count), 1_000)}>
+			{...loading ? { loading: "true" } : {}} variant="contained"
+			onClick={() => logoutButton.current.call(count)}>
 			Log Out
 		</Button>
 	)

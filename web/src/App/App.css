@@ -4,5 +4,8 @@
 
 .App-header {
 	/* top: 0; */
+	width: 100%;
 	position: fixed;
+	display: flex;
+	flex-direction: row;
 }
