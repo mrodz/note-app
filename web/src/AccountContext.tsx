@@ -31,8 +31,6 @@ export function AccountContext(props: { children: any }) {
 
 	useEffect(() => {
 		function onAccountLogin(e) {
-			// alert('login!!!!')
-			// alert(e.detail)
 			writeToLocalStorage(e.detail)
 			setAccount(e.detail)
 		}

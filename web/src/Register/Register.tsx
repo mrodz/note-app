@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useSnackbar } from "notistack"
 import fetch from "node-fetch"
 import { ThrottledCallback } from "../App";
+import { useNavigate } from "react-router";
+import { _login } from "../Login/Login";
 
 type SetStateFunction<T> = React.Dispatch<React.SetStateAction<T>>
 
@@ -67,6 +69,7 @@ export default function Login() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const [count, setCount] = useState(1)
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+	const navigate = useNavigate()
 
 	const a = username[0], b = password[0], c = passwordConfirm[0];
 
@@ -91,9 +94,12 @@ export default function Login() {
 			const data = await response.json();
 			const success = response.status === 200;
 
-			if (success)
+			if (success) {
+				await _login(data.username, password)
+
+				navigate('/dashboard', { replace: true })
 				closeSnackbar()
-			else if (/^Name Taken/.test(data.name))
+			} else if (/^Name Taken/.test(data.name))
 				setUsername([username, 3])
 
 			enqueueSnackbar(success ? "Success!" : data.name, {
@@ -101,7 +107,6 @@ export default function Login() {
 				persist: !success,
 				key: 'REGISTER_' + _key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar('REGISTER_' + _key) }}>{"×"}</Button>
-
 			})
 
 			return data

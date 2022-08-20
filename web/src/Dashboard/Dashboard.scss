@@ -1,0 +1,10 @@
+$padding: 2rem;
+
+.Dashboard {
+	margin: {
+		left: $padding * 4;
+		right: $padding * 4;
+		top: $padding * 4;
+	}
+	background-color: red;
+}

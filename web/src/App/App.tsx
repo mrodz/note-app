@@ -8,6 +8,7 @@ import { useContext } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material';
 import { Context, LocalStorageSessionInfo } from '../AccountContext';
 import AppHeading from './AppHeading';
+import Dashboard from '../Dashboard/Dashboard';
 
 function App() {
 
@@ -33,6 +34,7 @@ function App() {
           <Route path='/' element={<Landing />} />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
+          <Route path='/dashboard' element={<Dashboard />} />
         </Routes>
         signed in as {user?.username}
       </div>

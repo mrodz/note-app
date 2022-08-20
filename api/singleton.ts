@@ -15,20 +15,3 @@ export const createMockContext = (): MockContext => {
 		prisma: mockDeep<PrismaClient>()
 	}
 }
-
-// import { prisma } from ".";
-
-// jest.mock('./index', () => ({
-// 	__esModule: true,
-// 	default: mockDeep<PrismaClient>(),
-// }))
-
-// export const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
-
-
-// beforeEach(() => {
-// 	console.log(prismaMock);
-
-// 	mockReset(prismaMock)
-// })
-

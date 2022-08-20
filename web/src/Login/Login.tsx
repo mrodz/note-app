@@ -1,10 +1,31 @@
 import { Button, Card, TextField, Typography, ThemeProvider, FormControl } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router";
 import { readFromLocalStorage } from "../AccountContext";
 import { ThrottledCallback } from "../App";
 import { areUsernameAndPasswordValid } from "../Register/Register";
 import './Login.scss'
+
+export async function _login(username, password) {
+	if (!areUsernameAndPasswordValid(username, password)) return
+
+	const response = await fetch('http://localhost:5000/api/login', {
+		method: 'post',
+		body: JSON.stringify({
+			username: username,
+			password: password
+		}),
+		headers: { 'Content-Type': 'application/json' }
+	})
+
+	if (response.status === 200) {
+		const loginEvent = new CustomEvent('on:account-login', {
+			detail: await response.json()
+		})
+		document.dispatchEvent(loginEvent)
+	}
+}
 
 export default function Login() {
 	const [username, setUsername] = useState<string>('');
@@ -17,6 +38,7 @@ export default function Login() {
 		passwordRef = useRef(null);
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+	const navigate = useNavigate()
 
 	const sendLoginRequest = async (_key: number, username: string, password: string) => {
 		setLoading(true)
@@ -50,8 +72,9 @@ export default function Login() {
 				const loginEvent = new CustomEvent('on:account-login', {
 					detail: data
 				})
-
 				document.dispatchEvent(loginEvent)
+
+				navigate('/dashboard', { replace: true })
 				closeSnackbar()
 			}
 
