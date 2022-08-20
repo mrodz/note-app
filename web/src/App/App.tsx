@@ -6,7 +6,6 @@ import Register from '../Register/Register'
 import './App.css';
 import { useContext } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material';
-import LogoutButton from './LogoutButton';
 import { Context, LocalStorageSessionInfo } from '../AccountContext';
 import AppHeading from './AppHeading';
 

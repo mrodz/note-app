@@ -1,5 +1,5 @@
 export interface ThrottledCallback<T> {
-	callback: Function,
+	callback: (...args: T[]) => void,
 	time: number,
 }
 

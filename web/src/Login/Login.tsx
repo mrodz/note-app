@@ -55,7 +55,7 @@ export default function Login() {
 				closeSnackbar()
 			}
 
-			enqueueSnackbar(success ? "Success!" : data?.name ?? data?.title, {
+			enqueueSnackbar(success ? `Welcome, ${data?.username}` : data?.name ?? data?.title, {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: 'LOGIN_' + _key,

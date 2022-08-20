@@ -1,7 +1,6 @@
 import { Card, TextField, Typography, ThemeProvider, FormControl, Tooltip } from "@mui/material";
 import { LoadingButton as Button } from "@mui/lab"
 import { useRef, useState } from "react";
-// import { LoginTheme } from "../Login/Login";
 import { useSnackbar } from "notistack"
 import fetch from "node-fetch"
 import { ThrottledCallback } from "../App";
@@ -60,17 +59,6 @@ export function areUsernameAndPasswordValid(username, password) {
 function isFormValid(username, password, passwordConfirm) {
 	return areUsernameAndPasswordValid(username, password) && password === passwordConfirm
 }
-
-// let throttlePause;
-// export const throttle = (callback, time) => {
-// 	if (throttlePause) return;
-// 	callback();
-// 	throttlePause = true;
-
-// 	setTimeout(() => {
-// 		throttlePause = false;
-// 	}, time);
-// };
 
 export default function Login() {
 	const [username, setUsername] = useState<[string, keyof typeof USERNAME_MESSAGES]>(['', -1]);

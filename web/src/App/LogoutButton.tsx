@@ -35,7 +35,7 @@ export default function LogoutButton() {
 				closeSnackbar()
 			}
 
-			enqueueSnackbar(success ? "Success!" : data.name, {
+			enqueueSnackbar(success ? `Logged out from ${user.username}` : data.name, {
 				variant: success ? 'success' : 'error',
 				persist: !success,
 				key: 'LOGOUT_BUTTON_' + _key,
