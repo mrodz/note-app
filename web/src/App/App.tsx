@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Landing from '../Landing/Landing';
 import NotFound from '../NotFound/NotFound';
 import Login from '../Login/Login';
@@ -34,9 +34,8 @@ function App() {
           <Route path='/' element={<Landing />} />
           <Route path='/login' element={<Login />} />
           <Route path='/register' element={<Register />} />
-          <Route path='/dashboard' element={<Dashboard />} />
+          <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
         </Routes>
-        signed in as {user?.username}
       </div>
     </ThemeProvider>
   );

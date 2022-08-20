@@ -1,4 +1,4 @@
-import { Avatar, IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
+import { Avatar, IconButton, Menu, Tooltip } from "@mui/material";
 import React, { FC } from "react";
 import { LocalStorageSessionInfo } from "../AccountContext";
 import LogoutButton from "./LogoutButton";
