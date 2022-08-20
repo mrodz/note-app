@@ -105,7 +105,7 @@ SERVER: {
 	})
 
 	app.listen(port, async () => {
-		await prisma.session.deleteMany()
+		await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
 
 		console.log("server started " + port);
 		TESTS: {

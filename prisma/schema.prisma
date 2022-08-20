@@ -12,8 +12,10 @@ model User {
   id        String?   @unique @default(uuid())
   username  String    @unique
   password  String
+  // salt      String
   createdAt DateTime? @default(now())
   Session   Session?
+
   // Session   Session?
 
   @@index([username])

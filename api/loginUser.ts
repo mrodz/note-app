@@ -1,7 +1,7 @@
 import * as bcrypt from 'bcrypt'
 import { prisma, CaughtApiException, logger } from '.'
 import {
-	isUsernameAvailable,
+	// isUsernameAvailable,
 	isValidPasswordChars,
 	isValidPasswordLength,
 	isValidUsernameChars,
@@ -81,7 +81,8 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 		select: {
 			password: true,
 			Session: true,
-			id: true
+			id: true,
+			// salt: true
 		}
 	})
 

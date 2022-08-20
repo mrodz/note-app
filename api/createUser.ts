@@ -58,13 +58,15 @@ export default async function createUser(user: any, ctx?: Context) {
 		throw new CaughtApiException(`Name Taken: ${user.username}`, `The username '${user.username}' already exists`)
 	}
 
-	const salt = process.env.P_SALT as string;
+	// const salt = process.env.P_SALT as string;
+	const salt = await bcrypt.genSalt(10);
 	const password = await bcrypt.hash(user.password, salt);
 
 	const newUser = await (ctx?.prisma ?? prisma).user.create({
 		data: {
 			username: user.username,
 			password: password,
+			// salt: salt
 		}
 	})
 
