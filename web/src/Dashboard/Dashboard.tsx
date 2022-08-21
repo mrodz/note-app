@@ -2,7 +2,6 @@ import React, { useContext } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
 import { Skeleton, Typography } from '@mui/material'
-import CreateIcon from '@mui/icons-material/Create';
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import { motion } from 'framer-motion'
 
@@ -45,7 +44,6 @@ export default function Dashboard() {
 	const notes = Array(10).fill(<Note />)
 
 	console.log(notes);
-
 
 	return (
 		<>
