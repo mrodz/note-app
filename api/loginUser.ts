@@ -82,7 +82,6 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 			password: true,
 			Session: true,
 			id: true,
-			// salt: true
 		}
 	})
 

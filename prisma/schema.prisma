@@ -9,20 +9,28 @@ datasource db {
 }
 
 model User {
-  id        String?   @unique @default(uuid())
-  username  String    @unique
+  id        String     @unique @default(uuid())
+  username  String     @unique
   password  String
-  // salt      String
-  createdAt DateTime? @default(now())
+  createdAt DateTime   @default(now())
+  documents Document[]
   Session   Session?
-
-  // Session   Session?
 
   @@index([username])
 }
 
 model Session {
-  id     String  @unique @default(uuid())
-  userId String? @unique
-  User   User?   @relation(fields: [userId], references: [id])
+  id     String @unique @default(uuid())
+  userId String @unique
+  User   User   @relation(fields: [userId], references: [id])
+}
+
+model Document {
+  documentId  String    @unique @default(uuid())
+  title       String
+  content     String    @db.VarChar(1500)
+  createdAt   DateTime  @default(now())
+  lastUpdated DateTime?
+  userId      String
+  User        User      @relation(fields: [userId], references: [id])
 }

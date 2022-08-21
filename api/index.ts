@@ -1,11 +1,14 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import winston from 'winston'
-import createUser, { RegisterParams } from './createUser'
 import { PrismaClient } from './generated/client'
 import 'dotenv/config'
-import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
+import sha256 from 'crypto-js/sha256'
 import fetch from 'node-fetch'
+
+import createUser, { RegisterParams } from './createUser'
+import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
+import { CreateDocParams, createDocument } from './documentActions'
 
 const app = express()
 app.use(express.json())
@@ -104,32 +107,42 @@ SERVER: {
 		}
 	})
 
+	app.post('/api/create-doc', async (req: ModelRequest<CreateDocParams>, res: ModelResponse) => {
+		const body = req.body;
+		try {
+			let user = await createDocument(body);
+			// console.log(user);
+
+			res.send(user)
+		} catch (documentError) {
+			console.log(documentError);
+
+			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
+		}
+	})
+
 	app.listen(port, async () => {
-		await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
+		// await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
+		// await prisma.document.deleteMany()
 
 		console.log("server started " + port);
+
 		TESTS: {
-			break TESTS // comment this out when you're testing.
-			const user = {
-				username: "ymilosevic",
-				password: "Niblet16"
+			// break TESTS // comment this out when you're testing.
+			const req = {
+				sessionId: 'ee53411f-16ed-4a93-959f-f29836f39799',
+				userId: '78e1fe5d-b5c2-4e83-b212-2e61679bc90d',
+				title: 'third document'
 			}
 
-			const response = await fetch('http://localhost:5000/api/login', {
+			const response = await fetch('http://localhost:5000/api/create-doc', {
 				method: 'post',
-				body: JSON.stringify(user),
+				body: JSON.stringify(req),
 				headers: { 'Content-Type': 'application/json' }
 			});
 			const data = await response.json();
-			console.log('$', data, response.status)
+			// console.log('$', data, response.status)
 
-			const response2 = await fetch('http://localhost:5000/api/logout', {
-				method: 'post',
-				body: JSON.stringify({ userId: '34c39b0d-5f15-464f-aa9b-d6d7d460784d' }),
-				headers: { 'Content-Type': 'application/json' }
-			});
-			const data2 = await response2.json();
-			console.log('$', data2, response2.status);
 		}
 	})
 }
