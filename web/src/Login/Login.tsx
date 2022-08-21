@@ -1,11 +1,14 @@
-import { Button, Card, TextField, Typography, FormControl } from "@mui/material";
+import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider } from "@mui/material";
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useSnackbar } from "notistack";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { readFromLocalStorage } from "../AccountContext";
 import { ThrottledCallback } from "../App";
 import { areUsernameAndPasswordValid } from "../Register/Register";
+import { motion } from 'framer-motion';
 import './Login.scss'
+import { Link } from "react-router-dom";
 
 export async function _login(username, password) {
 	if (!areUsernameAndPasswordValid(username, password)) return
@@ -94,7 +97,7 @@ export default function Login() {
 	const loginButton = useRef(new ThrottledCallback(sendLoginRequest, 5_000))
 
 	return (
-		<div className="Login-root">
+		<motion.div className="Login-root">
 			<div className="-super-Login-Card">
 				<Card className="Login-Card">
 					<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
@@ -118,11 +121,19 @@ export default function Login() {
 						onClick={() => loginButton.current.call(count, username, password)}>
 						Sign In
 					</Button>
+					<Divider sx={{ marginBottom: '1.3rem' }}>
+
+						<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
+					</Divider>
+					<div className="Login-signuppanel">
+						<Tooltip title="Sign up today!" placement="bottom" arrow>
+							<Link to="/register" style={{ textDecoration: 'none', margin: 'auto' }}>
+								<Chip icon={<ArrowForwardIosIcon />} clickable label="Create One!" color="primary"></Chip>
+							</Link>
+						</Tooltip>
+					</div>
 				</Card>
 			</div>
-			{
-				JSON.stringify(readFromLocalStorage())
-			}
-		</div>
+		</motion.div>
 	)
 }
