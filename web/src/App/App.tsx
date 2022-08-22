@@ -23,6 +23,7 @@ function App() {
     }
   })
 
+  // find a more efficient way to do this.
   const user = useContext<LocalStorageSessionInfo>(Context)
   const location = useLocation()
 

@@ -1,7 +1,6 @@
 import * as bcrypt from 'bcrypt'
 import { prisma, CaughtApiException, logger } from '.'
 import {
-	// isUsernameAvailable,
 	isValidPasswordChars,
 	isValidPasswordLength,
 	isValidUsernameChars,
@@ -9,26 +8,27 @@ import {
 } from './createUser'
 import { Context } from './singleton'
 
+/**
+ * REST Parameters (POST Request Body)
+ */
 export interface LoginParams {
 	username: string,
 	password: string
 }
 
+/**
+ * REST Parameters (POST Request Body)
+ */
 export interface LogoutParams {
 	userId: string
 }
 
+/**
+ * Exception message shorthands.
+ */
 const messages = {
 	usernameError: "Invalid Username",
 	passwordError: "Invalid Password",
-}
-
-function discardUsername(username: string) {
-	return !isValidUsernameLength(username) || !isValidUsernameChars(username)
-}
-
-function discardPassword(password: string) {
-	return !isValidPasswordLength(password) || !isValidPasswordChars(password)
 }
 
 export async function logoutUser(userId: string, ctx?: Context) {
@@ -55,6 +55,22 @@ export async function logoutUser(userId: string, ctx?: Context) {
 }
 
 /**
+ * @param username the username in question
+ * @returns whether the username is valid (could it exist in the database?)
+ */
+function discardUsername(username: string) {
+	return !isValidUsernameLength(username) || !isValidUsernameChars(username)
+}
+
+/**
+ * @param password the password in question
+ * @returns whether the password is valid (could it exist in the database?)
+ */
+function discardPassword(password: string) {
+	return !isValidPasswordLength(password) || !isValidPasswordChars(password)
+}
+
+/**
  * Order of checks:
  * 1. Make sure the user fields are valid in the first place, 
  *   to avoid expensive computations.
@@ -67,7 +83,7 @@ export async function logoutUser(userId: string, ctx?: Context) {
  * @returns 
  */
 export async function loginUser(username: string, password: string, ctx?: Context) {
-	// Avoid database lookup if the user could not exist in the first place.
+	// Avoid database lookups if the user could not exist in the first place.
 	if (discardUsername(username))
 		throw new CaughtApiException(messages.usernameError, 'Username is not valid')
 
