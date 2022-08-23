@@ -6,13 +6,14 @@ import 'dotenv/config'
 import sha256 from 'crypto-js/sha256'
 import fetch from 'node-fetch'
 
+// ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
 import { CreateDocParams, createDocument } from './documentActions'
 
-const app = express()
-app.use(express.json())
-app.use(cors())
+const app = express()   // create ExpressJS app
+app.use(express.json()) // allow POST requests to take JSON inputs.
+app.use(cors())         // allow cross-origin requests.
 
 export type ExpressAppType = typeof app
 export const port = 5000
@@ -31,6 +32,7 @@ export type ApiError = {
 	description: string
 }
 
+// Used in endpoint implementations
 export type ModelRequest<T = any> = Request<{}, {}, T>
 export type ModelResponse = Response
 
@@ -38,8 +40,15 @@ export function buildError(title: string, description: string): ApiError {
 	return { title: title, description: description }
 }
 
+/// BEGIN CaughtApiException
 export interface CaughtApiException {
+	/**
+	 * Most important message; the title/cause of the exception
+	 */
 	name: string,
+	/**
+	 * Exception details/extra info.
+	 */
 	message: string
 }
 
@@ -49,14 +58,19 @@ export class CaughtApiException {
 		this.message = description ?? 'None';
 	}
 }
+/// END CaughtApiException
 
+// Only log to console if we're not in production.
 if (process.env.NODE_ENV !== 'production') {
 	logger.add(new winston.transports.Console({
 		format: winston.format.simple()
 	}))
 }
 
-const loop = async (i: number, cb: () => void) => {
+/**
+ * Utility function
+ */
+export const loop = async (i: number, cb: () => void) => {
 	for (let iter = 0; iter < i; iter++) {
 		await cb()
 	}
@@ -69,6 +83,7 @@ SERVER: {
 	logger.add(new winston.transports.File({ filename: './logs/combined.log' }))
 	logger.add(new winston.transports.File({ filename: './logs/error.log' }))
 
+	/// BEGIN Endpoints
 	app.post('/api/register', async (req: ModelRequest<RegisterParams>, res: ModelResponse) => {
 		const body = req.body;
 		// console.log(req)
@@ -120,7 +135,9 @@ SERVER: {
 			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
 		}
 	})
+	/// END Endpoints
 
+	// Hoist the app
 	app.listen(port, async () => {
 		// await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
 		// await prisma.document.deleteMany()

@@ -1,12 +1,19 @@
 import { CaughtApiException, prisma } from ".";
 import { Context } from "./singleton";
 
+/**
+ * REST Parameters (POST Request Body)
+ */
 export interface CreateDocParams {
 	sessionId: string,
 	userId: string,
 	title: string
 }
 
+/**
+ * Create a document for a user. Requires a valid `sessionID` to authenticate.
+ * @todo
+ */
 export async function createDocument({ sessionId, userId, title }: CreateDocParams, ctx?: Context) {
 	const userIdOfSession = await prisma.session.findUnique({
 		where: {
@@ -35,6 +42,7 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 		}
 	})
 
+	// if a document exists, the amount returned will not be zero.
 	if (count.length !== 0) {
 		throw new CaughtApiException("A document with this title already exists!")
 	}
@@ -53,5 +61,5 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 		}
 	})
 
-	return documents
+	return documents // fixme
 }
