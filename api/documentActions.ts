@@ -1,20 +1,20 @@
 import { CaughtApiException, prisma } from ".";
+import { Document } from "./generated/client";
 import { Context } from "./singleton";
+
+export interface DocumentActionAuth {
+	sessionId: string,
+	userId: string
+}
 
 /**
  * REST Parameters (POST Request Body)
  */
-export interface CreateDocParams {
-	sessionId: string,
-	userId: string,
+export interface CreateDocParams extends DocumentActionAuth {
 	title: string
 }
 
-/**
- * Create a document for a user. Requires a valid `sessionID` to authenticate.
- * @todo
- */
-export async function createDocument({ sessionId, userId, title }: CreateDocParams, ctx?: Context) {
+export async function validateSession(sessionId, userId) {
 	const userIdOfSession = await prisma.session.findUnique({
 		where: {
 			id: sessionId
@@ -25,15 +25,44 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	})
 
 	if (userIdOfSession === null || userIdOfSession?.userId !== userId) {
-		throw new CaughtApiException("Invalid session ID")
+		return false
 	}
+
+	return userIdOfSession.userId
+}
+
+export async function getDocuments({ sessionId, userId }: DocumentActionAuth): Promise<Document[]> {
+	const userIdOfSession = await validateSession(sessionId, userId);
+
+	if (!userIdOfSession)
+		throw new CaughtApiException("Invalid session ID")
+
+	return await prisma.document.findMany({
+		take: 10,
+		where: {
+			userId: userIdOfSession
+		},
+		orderBy: {
+			lastUpdated: 'desc'
+		}
+	})
+}
+
+/**
+ * Create a document for a user. Requires a valid `sessionID` to authenticate.
+ * @todo
+ */
+export async function createDocument({ sessionId, userId, title }: CreateDocParams, ctx?: Context) {
+	const userIdOfSession = await validateSession(sessionId, userId);
+
+	if (!userIdOfSession)
+		throw new CaughtApiException("Invalid session ID")
+
 
 	const document = {
 		content: '',
 		title: title,
 	}
-
-	console.log(userId);
 
 	let count = await prisma.document.findMany({
 		where: {
@@ -55,6 +84,9 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 			documents: {
 				create: document
 			},
+			documentCount: {
+				increment: 1
+			}
 		},
 		select: {
 			documents: true

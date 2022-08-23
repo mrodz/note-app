@@ -9,7 +9,7 @@ import fetch from 'node-fetch'
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
-import { CreateDocParams, createDocument } from './documentActions'
+import { CreateDocParams, createDocument, getDocuments } from './documentActions'
 
 const app = express()   // create ExpressJS app
 app.use(express.json()) // allow POST requests to take JSON inputs.
@@ -122,6 +122,19 @@ SERVER: {
 		}
 	})
 
+	app.post('/api/get-docs', async (req: ModelRequest, res: ModelResponse) => {
+		const body = req.body;
+		try {
+			let user = await getDocuments(body);
+
+			res.send(user)
+		} catch (documentError) {
+			console.log(documentError);
+
+			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
+		}
+	})
+
 	app.post('/api/create-doc', async (req: ModelRequest<CreateDocParams>, res: ModelResponse) => {
 		const body = req.body;
 		try {
@@ -145,11 +158,11 @@ SERVER: {
 		console.log("server started " + port);
 
 		TESTS: {
-			// break TESTS // comment this out when you're testing.
+			break TESTS // comment this out when you're testing.
 			const req = {
-				sessionId: 'ee53411f-16ed-4a93-959f-f29836f39799',
+				sessionId: '7a179ce4-2744-4a4e-beff-c7a8d86efa94',
 				userId: '78e1fe5d-b5c2-4e83-b212-2e61679bc90d',
-				title: 'third document'
+				title: 'Lorem!'
 			}
 
 			const response = await fetch('http://localhost:5000/api/create-doc', {
@@ -157,8 +170,9 @@ SERVER: {
 				body: JSON.stringify(req),
 				headers: { 'Content-Type': 'application/json' }
 			});
+
 			const data = await response.json();
-			// console.log('$', data, response.status)
+			console.log('$', data, response.status)
 
 		}
 	})

@@ -1,9 +1,9 @@
 import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider, InputAdornment, IconButton } from "@mui/material";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useSnackbar } from "notistack";
-import { useState, useRef } from "react";
-import { useNavigate } from "react-router";
-import { readFromLocalStorage } from "../AccountContext";
+import { useState, useRef, useContext, useEffect } from "react";
+import { Navigate, useNavigate } from "react-router";
+import { Context, readFromLocalStorage } from "../AccountContext";
 import { ThrottledCallback } from "../App";
 import { areUsernameAndPasswordValid } from "../Register/Register";
 import { motion } from 'framer-motion';
@@ -41,6 +41,8 @@ export default function Login() {
 
 	let usernameRef = useRef(null),
 		passwordRef = useRef(null);
+
+	let user = useContext(Context);
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 	const navigate = useNavigate()
@@ -102,50 +104,66 @@ export default function Login() {
 
 	const loginButton = useRef(new ThrottledCallback(sendLoginRequest, 5_000))
 
+	// don't allow users to visit the login page if they are already logged in.
+	// will also queue a snackbar -- this will prompt twice in production,
+	// because of <React.StrictMode>
+	useEffect(() => {
+		if (user?.sessionId) {
+			enqueueSnackbar(`Saved login session for ${user?.username}`, {
+				variant: 'success',
+				key: 'LOGIN_savedloginsession',
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_savedloginsession') }}>{"×"}</Button>
+			})
+			navigate('/dashboard')
+		}
+	}, []);
+
 	return (
-		<motion.div className="Login-root">
-			<div className="-super-Login-Card">
-				<Card className="Login-Card">
-					<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
-					<FormControl sx={{ width: '100%' }}>
-						<div className="Login-usernameform">
-							<TextField label="Username" inputRef={usernameRef}
-								helperText="Enter your username"
-								color="secondary" onChange={_ => setUsername(usernameRef.current.value)}
-							/>
+		<>
+			<motion.div className="Login-root">
+				<div className="-super-Login-Card">
+					<Card className="Login-Card">
+						<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
+						<FormControl sx={{ width: '100%' }}>
+							<div className="Login-usernameform">
+								<TextField label="Username" inputRef={usernameRef}
+									helperText="Enter your username"
+									color="secondary" onChange={_ => setUsername(usernameRef.current.value)}
+								/>
+							</div>
+							<div className="Login-passwordform">
+								<TextField label="Password" inputRef={passwordRef}
+									helperText={"Enter your password"} type={passwordVisible ? "text" : "password"}
+									color="secondary" onChange={_ => setPassword(passwordRef.current.value)}
+									InputProps={{
+										endAdornment: (
+											<IconButton onClick={hidePassword}>
+												{passwordVisible ? <Visibility /> : <VisibilityOff />}
+											</IconButton>
+										)
+									}}
+								/>
+							</div>
+						</FormControl>
+						<Button
+							disabled={username === '' || password === ''}
+							{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
+							onClick={() => loginButton.current.call(count, username, password)}>
+							Sign In
+						</Button>
+						<Divider sx={{ marginBottom: '1.3rem' }}>
+							<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
+						</Divider>
+						<div className="Login-signuppanel">
+							<Tooltip title="Sign up today!" placement="bottom" arrow>
+								<Link to="/register" style={{ textDecoration: 'none', margin: 'auto' }}>
+									<Chip icon={<ArrowForwardIosIcon />} clickable label="Create One!" color="primary"></Chip>
+								</Link>
+							</Tooltip>
 						</div>
-						<div className="Login-passwordform">
-							<TextField label="Password" inputRef={passwordRef}
-								helperText={"Enter your password"} type={passwordVisible ? "text" : "password"}
-								color="secondary" onChange={_ => setPassword(passwordRef.current.value)}
-								InputProps={{
-									endAdornment: (
-										<IconButton onClick={hidePassword}>
-											{passwordVisible ? <Visibility /> : <VisibilityOff />}
-										</IconButton>
-									)
-								}}
-							/>
-						</div>
-					</FormControl>
-					<Button
-						disabled={username === '' || password === ''}
-						{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
-						onClick={() => loginButton.current.call(count, username, password)}>
-						Sign In
-					</Button>
-					<Divider sx={{ marginBottom: '1.3rem' }}>
-						<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
-					</Divider>
-					<div className="Login-signuppanel">
-						<Tooltip title="Sign up today!" placement="bottom" arrow>
-							<Link to="/register" style={{ textDecoration: 'none', margin: 'auto' }}>
-								<Chip icon={<ArrowForwardIosIcon />} clickable label="Create One!" color="primary"></Chip>
-							</Link>
-						</Tooltip>
-					</div>
-				</Card>
-			</div>
-		</motion.div >
+					</Card>
+				</div>
+			</motion.div >
+		</>
 	)
 }

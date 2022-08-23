@@ -98,6 +98,7 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 			password: true,
 			Session: true,
 			id: true,
+			documentCount: true
 		}
 	})
 
@@ -124,6 +125,7 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 	return {
 		username: username,
 		accountId: user.id,
-		sessionId: session.id
+		sessionId: session.id,
+		documentCount: user.documentCount
 	}
 }

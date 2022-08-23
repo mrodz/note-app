@@ -3,13 +3,15 @@ import { createContext, useEffect, useState } from "react";
 export interface LocalStorageSessionInfo {
 	username: string,
 	accountId: string,
-	sessionId: string
+	sessionId: string,
+	documentCount: string
 }
 
-export function writeToLocalStorage({ username, accountId, sessionId }: LocalStorageSessionInfo) {
+export function writeToLocalStorage({ username, accountId, sessionId, documentCount }: LocalStorageSessionInfo) {
 	localStorage.setItem('username', username)
 	localStorage.setItem('account-id', accountId)
 	localStorage.setItem('session-id', sessionId)
+	localStorage.setItem('document-count', documentCount)
 }
 
 export function readFromLocalStorage(): LocalStorageSessionInfo {
@@ -17,13 +19,15 @@ export function readFromLocalStorage(): LocalStorageSessionInfo {
 		username: localStorage.getItem('username'),
 		accountId: localStorage.getItem('account-id'),
 		sessionId: localStorage.getItem('session-id'),
+		documentCount: localStorage.getItem('document-count')
 	}
 }
 
 export const Context = createContext<LocalStorageSessionInfo>({
 	username: null,
 	accountId: null,
-	sessionId: null
+	sessionId: null,
+	documentCount: null
 })
 
 export function AccountContext(props: { children: any }) {
@@ -39,6 +43,7 @@ export function AccountContext(props: { children: any }) {
 			delete localStorage['username']
 			delete localStorage['account-id']
 			delete localStorage['session-id']
+			delete localStorage['document-count']
 
 			setAccount(undefined)
 		}
