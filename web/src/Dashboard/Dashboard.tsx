@@ -1,10 +1,11 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
-import { Button, Card, Skeleton, Typography } from '@mui/material'
+import { Button, Card, Divider, Skeleton, Typography } from '@mui/material'
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import { motion } from 'framer-motion'
 import { useSnackbar } from 'notistack';
+import BeenhereIcon from '@mui/icons-material/Beenhere';
 
 function getGreeting(hour: number = new Date().getHours()): string {
 	if (hour >= 19 || hour < 5) return "Good Evening"
@@ -25,6 +26,13 @@ function getBlurb(): string {
 	return blurbs[n];
 }
 
+function trimString(str: string): string {
+	if (str.length > 13) {
+		return str.substring(0, 11) + '...'
+	}
+	return str
+}
+
 function notesFromDocuments(documents) {
 	return documents?.map?.(e => {
 		const today = new Date();
@@ -37,7 +45,12 @@ function notesFromDocuments(documents) {
 
 		return (
 			<div className="Dashboard-Note">
-				<Typography variant="caption">Last updated {lastUpdatedString}</Typography>
+				<Typography variant="h6" fontWeight="bold">{e.title}</Typography>
+				<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+					<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography><BeenhereIcon sx={{ width: '1rem' }} />
+				</div>
+				<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
+				<Typography variant="caption" mr="1rem"> {e.content === '' ? 'Empty Document' : trimString(e.content)}</Typography>
 			</div>
 		)
 	})
@@ -46,7 +59,7 @@ function notesFromDocuments(documents) {
 const Note = () => {
 	return (
 		<div className="Dashboard-Note">
-			<Skeleton variant="rectangular" height="10rem"></Skeleton>
+			<Skeleton variant="rectangular" height="5rem"></Skeleton>
 			<Skeleton width="70%"></Skeleton>
 			<Skeleton width="30%"></Skeleton>
 		</div>
@@ -54,7 +67,7 @@ const Note = () => {
 }
 
 function sanitizeList(list: any[]) {
-	return list.map((e, i) => <Card key={i}>{e}</Card>)
+	return list.map((e, i) => <Card sx={{ margin: '1rem' }} key={i}>{e}</Card>)
 }
 
 export default function Dashboard() {
@@ -85,8 +98,10 @@ export default function Dashboard() {
 				})
 			}
 
+			// uncomment these lines to test loading work.
+			// setTimeout(() =>
 			setDocuments({ loaded: true, list: data })
-
+			// , 5000)
 		})()
 	}, [])
 
