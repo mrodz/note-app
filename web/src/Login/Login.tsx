@@ -1,4 +1,4 @@
-import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider } from "@mui/material";
+import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider, InputAdornment, IconButton } from "@mui/material";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useSnackbar } from "notistack";
 import { useState, useRef } from "react";
@@ -9,6 +9,7 @@ import { areUsernameAndPasswordValid } from "../Register/Register";
 import { motion } from 'framer-motion';
 import './Login.scss'
 import { Link } from "react-router-dom";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 export async function _login(username, password) {
 	if (!areUsernameAndPasswordValid(username, password)) return
@@ -34,6 +35,7 @@ export default function Login() {
 	const [username, setUsername] = useState<string>('');
 	const [password, setPassword] = useState<string>('');
 	const [loading, setLoading] = useState<boolean>(false);
+	const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
 
 	const [count, setCount] = useState(1)
 
@@ -94,6 +96,10 @@ export default function Login() {
 		}
 	}
 
+	const hidePassword = () => {
+		setPasswordVisible(!passwordVisible);
+	}
+
 	const loginButton = useRef(new ThrottledCallback(sendLoginRequest, 5_000))
 
 	return (
@@ -110,8 +116,15 @@ export default function Login() {
 						</div>
 						<div className="Login-passwordform">
 							<TextField label="Password" inputRef={passwordRef}
-								helperText={"Enter your password"} type="password"
+								helperText={"Enter your password"} type={passwordVisible ? "text" : "password"}
 								color="secondary" onChange={_ => setPassword(passwordRef.current.value)}
+								InputProps={{
+									endAdornment: (
+										<IconButton onClick={hidePassword}>
+											{passwordVisible ? <Visibility /> : <VisibilityOff />}
+										</IconButton>
+									)
+								}}
 							/>
 						</div>
 					</FormControl>
@@ -122,7 +135,6 @@ export default function Login() {
 						Sign In
 					</Button>
 					<Divider sx={{ marginBottom: '1.3rem' }}>
-
 						<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
 					</Divider>
 					<div className="Login-signuppanel">
@@ -134,6 +146,6 @@ export default function Login() {
 					</div>
 				</Card>
 			</div>
-		</motion.div>
+		</motion.div >
 	)
 }
