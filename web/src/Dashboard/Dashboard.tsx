@@ -1,12 +1,13 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { forwardRef, ReactElement, useContext, useEffect, useRef, useState } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
-import { Button, Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, Skeleton, TextField, Tooltip, Typography } from '@mui/material'
+import { Button, Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, Skeleton, Slide, TextField, Tooltip, Typography } from '@mui/material'
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import { motion } from 'framer-motion'
 import { useSnackbar } from 'notistack';
 import BeenhereIcon from '@mui/icons-material/Beenhere';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { TransitionProps } from '@mui/material/transitions';
 
 function getGreeting(hour: number = new Date().getHours()): string {
 	if (hour >= 19 || hour < 5) return "Good Evening"
@@ -51,7 +52,7 @@ function notesFromDocuments(documents) {
 					<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography><BeenhereIcon sx={{ width: '1rem' }} />
 				</div>
 				<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-				<Typography variant="caption" mr="1rem"> {e.content === '' ? 'Empty Document' : trimString(e.content)}</Typography>
+				<Typography variant="caption" mr="1rem"> {e.content === '' ? <i>Empty Document</i> : trimString(e.content)}</Typography>
 			</div>
 		)
 	})
@@ -70,6 +71,15 @@ const Note = () => {
 function sanitizeList(list: any[]) {
 	return list.map((e, i) => <Card sx={{ margin: '1rem' }} key={i}>{e}</Card>)
 }
+
+const Transition = forwardRef(function Transition(
+	props: TransitionProps & {
+		children: ReactElement<any, any>;
+	},
+	ref: React.Ref<unknown>,
+) {
+	return <Slide direction="up" ref={ref} {...props} />;
+});
 
 export default function Dashboard() {
 	const user = useContext(Context)
@@ -129,7 +139,6 @@ export default function Dashboard() {
 			setOpenCreateDoc(false)
 		}
 	}
-
 	return (
 		<>
 			<motion.div
@@ -152,14 +161,17 @@ export default function Dashboard() {
 						</Tooltip>
 					</div>
 				</div>
-				{(!documents.loaded || documents?.list?.length > 0) &&
-					<div className="Dashboard-notes">
+				{(!documents.loaded || documents?.list?.length > 0)
+					? <div className="Dashboard-notes">
 						{sanitizeList(!documents.loaded ? Array(Number(user?.documentCount)).fill(<Note />) : notesFromDocuments(documents.list))}
 					</div>
+					: <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+						You don&apos;t have have any documents yet!
+					</Typography>
 				}
 			</motion.div>
 
-			<Dialog open={openCreateDoc}>
+			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted>
 				<DialogTitle>Create Document</DialogTitle>
 				<DialogContent>
 					<TextField
@@ -172,8 +184,8 @@ export default function Dashboard() {
 					/>
 				</DialogContent>
 				<DialogActions>
-					<Button onClick={() => setOpenCreateDoc(false)}>Cancel</Button>
-					<Button onClick={createDocument}>Done</Button>
+					<Button variant="text" onClick={() => setOpenCreateDoc(false)}>Cancel</Button>
+					<Button variant="contained" onClick={createDocument}>Done</Button>
 				</DialogActions>
 			</Dialog>
 		</>
