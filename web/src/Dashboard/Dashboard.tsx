@@ -1,11 +1,12 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
-import { Button, Card, Divider, Skeleton, Typography } from '@mui/material'
+import { Button, Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, Skeleton, TextField, Tooltip, Typography } from '@mui/material'
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import { motion } from 'framer-motion'
 import { useSnackbar } from 'notistack';
 import BeenhereIcon from '@mui/icons-material/Beenhere';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 function getGreeting(hour: number = new Date().getHours()): string {
 	if (hour >= 19 || hour < 5) return "Good Evening"
@@ -72,12 +73,22 @@ function sanitizeList(list: any[]) {
 
 export default function Dashboard() {
 	const user = useContext(Context)
+
 	// [<done loading>, <documents>]
 	const [documents, setDocuments] = useState({ loaded: false, list: [] })
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+	const [openCreateDoc, setOpenCreateDoc] = useState(false)
+	const [snackbarCount, setSnackbarCount] = useState(1)
+	const [messages, setMessages] = useState({ greeting: '', blurb: '' })
+
+	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+
+	const createDocTitleRef = useRef(null)
 
 	useEffect(() => {
+		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
 		(async () => {
+			setSnackbarCount(snackbarCount + 1)
+
 			const response = await fetch('http://localhost:5000/api/get-docs', {
 				method: 'post',
 				body: JSON.stringify({
@@ -93,8 +104,8 @@ export default function Dashboard() {
 				enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
 					variant: 'error',
 					persist: true,
-					key: 'LOGIN_fetchdocumentserror',
-					action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_fetchdocumentserror') }}>{"×"}</Button>
+					key: 'LOGIN_' + snackbarCount,
+					action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
 				})
 			}
 
@@ -105,6 +116,20 @@ export default function Dashboard() {
 		})()
 	}, [])
 
+	const createDocument = async () => {
+		setSnackbarCount(snackbarCount + 1)
+
+		try {
+			enqueueSnackbar(`Created doc '${createDocTitleRef.current.value}'`, {
+				variant: 'success',
+				key: 'LOGIN_' + snackbarCount,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+			})
+		} finally {
+			setOpenCreateDoc(false)
+		}
+	}
+
 	return (
 		<>
 			<motion.div
@@ -113,14 +138,44 @@ export default function Dashboard() {
 				animate={{ width: 'inherit' }}
 				exit={{ x: window.innerWidth }}
 			>
-				<Typography variant="h3">{getGreeting()}, {user?.username}</Typography>
-				<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{getBlurb()}</Typography>
+				<div className="Dashboard-top">
+					<div>
+						<Typography variant="h3">{messages.greeting}, {user?.username}</Typography>
+						<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
+					</div>
+					<div style={{ flexGrow: 1 }}></div>
+					<div className='Dashboard-top-createdocument'>
+						<Tooltip title="Create document">
+							<IconButton onClick={() => setOpenCreateDoc(true)}>
+								<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
+							</IconButton>
+						</Tooltip>
+					</div>
+				</div>
 				{(!documents.loaded || documents?.list?.length > 0) &&
 					<div className="Dashboard-notes">
 						{sanitizeList(!documents.loaded ? Array(Number(user?.documentCount)).fill(<Note />) : notesFromDocuments(documents.list))}
 					</div>
 				}
 			</motion.div>
+
+			<Dialog open={openCreateDoc}>
+				<DialogTitle>Create Document</DialogTitle>
+				<DialogContent>
+					<TextField
+						autoFocus
+						fullWidth
+						margin="dense"
+						variant="standard"
+						label="Name"
+						inputRef={createDocTitleRef}
+					/>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={() => setOpenCreateDoc(false)}>Cancel</Button>
+					<Button onClick={createDocument}>Done</Button>
+				</DialogActions>
+			</Dialog>
 		</>
 	)
 }

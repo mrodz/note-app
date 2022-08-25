@@ -16,3 +16,12 @@ $padding: 2rem;
 .Dashboard-Note {
 	margin: $padding;
 }
+
+.Dashboard-top {
+	display: flex;
+	flex-direction: row;
+}
+
+.Dashboard-top-createdocument {
+	// justify-self: flex-end;
+}

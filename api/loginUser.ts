@@ -112,7 +112,8 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 		throw new CaughtApiException(messages.passwordError, 'Password is not valid');
 
 	if (user.Session !== null)
-		throw new CaughtApiException('This account is already logged in.')
+		await logoutUser(user.id)
+	// throw new CaughtApiException('This account is already logged in.')
 
 	const session = await (ctx?.prisma ?? prisma).session.create({
 		data: {
