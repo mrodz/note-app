@@ -128,7 +128,6 @@ export default function Dashboard() {
 	// [<done loading>, <documents>]
 	const [documents, setDocuments] = useState({ loaded: false, list: [] })
 	const [openCreateDoc, setOpenCreateDoc] = useState(false)
-	const [snackbarCount, setSnackbarCount] = useState(1)
 	const [messages, setMessages] = useState({ greeting: '', blurb: '' })
 	const [settingsOpen, setSettingsOpen] = useState({ open: false, document: null })
 	const [confirmDelete, setConfirmDelete] = useState(false);
@@ -139,8 +138,6 @@ export default function Dashboard() {
 	const renameDocRef = useRef(null)
 
 	const requestDocuments = useCallback(async function () {
-		setSnackbarCount(snackbarCount + 1)
-
 		const response = await fetch('http://localhost:5000/api/get-docs', {
 			method: 'post',
 			body: JSON.stringify({
@@ -151,18 +148,18 @@ export default function Dashboard() {
 		})
 
 		const data = await response.json()
-
 		if (response.status !== 200) {
+			const key = 'LOGIN_' + Math.random()
 			enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
 				variant: 'error',
 				persist: true,
-				key: 'LOGIN_' + snackbarCount,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+				key: key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
 		}
 
 		setDocuments({ loaded: true, list: data })
-	}, [])
+	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId])
 
 	useEffect(() => {
 		console.log('@');
@@ -174,9 +171,6 @@ export default function Dashboard() {
 		})()
 
 		const openSettings = (e) => {
-			console.log(JSON.stringify(e.detail));
-
-			// setAnchorEl(e.currentTarget);
 			setSettingsOpen({ open: true, document: e.detail })
 		}
 
@@ -188,9 +182,19 @@ export default function Dashboard() {
 	}, [requestDocuments])
 
 	const createDocument = async () => {
-		setSnackbarCount(snackbarCount + 1)
-
 		try {
+			if (!validateTitle(createDocTitleRef.current.value)) {
+				const key = 'LOGIN_' + Math.random()
+				enqueueSnackbar('Cannot set this as a title!', {
+					variant: 'error',
+					persist: true,
+					key: key,
+					action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+				})
+
+				return
+			}
+
 			const response = await fetch('http://localhost:5000/api/create-doc', {
 				method: 'post',
 				body: JSON.stringify({
@@ -202,12 +206,15 @@ export default function Dashboard() {
 			})
 
 			const data = await response.json()
+			const success = response.status === 200
 
-			enqueueSnackbar(response.status === 200 ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${data.name}`, {
-				variant: 'success',
+			closeSnackbar()
+			const key = 'LOGIN_' + Math.random()
+			enqueueSnackbar(success ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${data.name}`, {
+				variant: success ? 'success' : 'error',
 				persist: false,
-				key: 'LOGIN_' + snackbarCount,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+				key: key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
 
 			if (response.status === 200) await requestDocuments();
@@ -310,14 +317,24 @@ export default function Dashboard() {
 							inputRef={renameDocRef} autoFocus variant="standard" defaultValue={settingsOpen.document?.title} />
 						<Button
 							onClick={async () => {
-								setSnackbarCount(snackbarCount + 1)
-
 								if (!validateTitle(renameDocRef.current.value)) {
+									const key = 'LOGIN_' + Math.random()
 									enqueueSnackbar('Cannot set this as a title!', {
 										variant: 'error',
 										persist: false,
-										key: 'LOGIN_' + snackbarCount,
-										action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+										key: key,
+										action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+									})
+									return;
+								}
+
+								if (renameDocRef.current.value === settingsOpen.document.title) {
+									const key = 'LOGIN_' + Math.random()
+									enqueueSnackbar('This is already the title!', {
+										variant: 'error',
+										persist: false,
+										key: key,
+										action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 									})
 									return;
 								}
@@ -336,11 +353,13 @@ export default function Dashboard() {
 								const data = await response.json()
 								const success = response.status === 200
 
+								closeSnackbar()
+								const key = 'LOGIN_' + Math.random()
 								enqueueSnackbar(success ? `New name: '${data.title}'` : `Error: ${data.name}`, {
 									variant: success ? 'success' : 'error',
 									persist: !success,
-									key: 'LOGIN_' + snackbarCount,
-									action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+									key: key,
+									action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 								})
 
 								if (success) {
@@ -370,8 +389,6 @@ export default function Dashboard() {
 				</DialogContentText>
 				<DialogActions>
 					<Button variant="outlined" onClick={async () => {
-						setSnackbarCount(snackbarCount + 1)
-
 						try {
 							const response = await fetch('http://localhost:5000/api/delete-doc', {
 								method: 'post',
@@ -386,11 +403,13 @@ export default function Dashboard() {
 							const data = await response.json()
 							const success = response.status === 200
 
+							closeSnackbar()
+							const key = 'LOGIN_' + Math.random()
 							enqueueSnackbar(success ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${data.name}`, {
 								variant: success ? 'success' : 'error',
 								persist: !success,
-								key: 'LOGIN_' + snackbarCount,
-								action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+								key: key,
+								action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 							})
 
 							if (success) await requestDocuments()
