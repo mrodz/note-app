@@ -22,6 +22,16 @@ $padding: 2rem;
 	flex-direction: row;
 }
 
-.Dashboard-top-createdocument {
-	// justify-self: flex-end;
+.Dashboard-Note-top {
+	display: flex;
+	flex-direction: row;
+}
+
+.Dashboard-Note-title {
+	word-break: break-all;
+}
+
+.Dashboard-Note-Settings-top {
+	display: flex;
+	flex-direction: row;
 }

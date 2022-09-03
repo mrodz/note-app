@@ -31,7 +31,7 @@ export async function validateSession(sessionId, userId) {
 	return userIdOfSession.userId
 }
 
-export async function getDocuments({ sessionId, userId }: DocumentActionAuth): Promise<Document[]> {
+export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
 	const userIdOfSession = await validateSession(sessionId, userId);
 
 	if (!userIdOfSession)
@@ -41,6 +41,13 @@ export async function getDocuments({ sessionId, userId }: DocumentActionAuth): P
 		take: 10,
 		where: {
 			userId: userIdOfSession
+		},
+		select: {
+			documentId: true,
+			title: true,
+			lastUpdated: true,
+			createdAt: true,
+			preview: true
 		},
 		orderBy: {
 			lastUpdated: 'desc'
@@ -58,12 +65,6 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	if (!userIdOfSession)
 		throw new CaughtApiException("Invalid session ID")
 
-
-	const document = {
-		content: '',
-		title: title,
-	}
-
 	let count = await prisma.document.findMany({
 		where: {
 			userId: userId,
@@ -76,22 +77,35 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 		throw new CaughtApiException("A document with this title already exists!")
 	}
 
-	const documents = await prisma.user.update({
-		where: {
-			id: userId
-		},
+	const document = await prisma.document.create({
 		data: {
-			documents: {
-				create: document
-			},
-			documentCount: {
-				increment: 1
-			}
-		},
-		select: {
-			documents: true
+			content: '',
+			title: title,
+			preview: null,
+			userId: userIdOfSession
 		}
 	})
 
-	return documents // fixme
+	return { documentId: document.documentId };
+	// const documents = await prisma.user.update({
+	// 	where: {
+	// 		id: userId
+	// 	},
+	// 	data: {
+	// 		documents: {
+	// 			create: {
+	// 				...document,
+	// 				preview: null
+	// 			}
+	// 		},
+	// 		documentCount: {
+	// 			increment: 1
+	// 		}
+	// 	},
+	// 	select: {
+	// 		documents: true
+	// 	}
+	// })
+
+	// return documents // fixme
 }

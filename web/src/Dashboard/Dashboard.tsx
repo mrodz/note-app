@@ -1,11 +1,33 @@
 import { forwardRef, ReactElement, useContext, useEffect, useRef, useState } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
-import { Button, Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, Skeleton, Slide, TextField, Tooltip, Typography } from '@mui/material'
+import {
+	Button,
+	Card,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogContentText,
+	DialogTitle,
+	Divider,
+	IconButton,
+	List,
+	ListItem,
+	ListItemIcon,
+	ListItemText,
+	Skeleton,
+	Slide,
+	TextField,
+	Tooltip,
+	Typography
+} from '@mui/material'
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { motion } from 'framer-motion'
 import { useSnackbar } from 'notistack';
-import BeenhereIcon from '@mui/icons-material/Beenhere';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
 
@@ -39,20 +61,35 @@ function notesFromDocuments(documents) {
 	return documents?.map?.(e => {
 		const today = new Date();
 		const lastUpdated = new Date(e.lastUpdated)
-		const hours = lastUpdated.getHours()
 
-		const lastUpdatedString = lastUpdated.getUTCDate() === today.getUTCDate()
-			? `${hours > 12 ? hours - 12 : hours}:${lastUpdated.getMinutes()} ${hours < 12 ? "AM" : "PM"}`
-			: `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
+		const lastUpdatedString = (() => {
+			if (lastUpdated.getUTCDate() !== today.getUTCDate())
+				return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
+
+			const hours = lastUpdated.getHours()
+			return `${hours > 12 ? hours - 12 : hours}:${lastUpdated.getMinutes()} ${hours < 12 ? "AM" : "PM"}`
+		})()
 
 		return (
 			<div className="Dashboard-Note">
-				<Typography variant="h6" fontWeight="bold">{e.title}</Typography>
-				<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-					<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography><BeenhereIcon sx={{ width: '1rem' }} />
+				<div className='Dashboard-Note-top'>
+					<div>
+						<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
+						<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+							<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+						</div>
+					</div>
+					<div style={{ flexGrow: 1 }}></div>
+					<div>
+						<IconButton onClick={() => document.dispatchEvent(new CustomEvent('on:open-doc-settings', {
+							detail: e
+						}))}>
+							<MoreVertIcon />
+						</IconButton>
+					</div>
 				</div>
 				<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-				<Typography variant="caption" mr="1rem"> {e.content === '' ? <i>Empty Document</i> : trimString(e.content)}</Typography>
+				<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.content)}</Typography>
 			</div>
 		)
 	})
@@ -89,19 +126,68 @@ export default function Dashboard() {
 	const [openCreateDoc, setOpenCreateDoc] = useState(false)
 	const [snackbarCount, setSnackbarCount] = useState(1)
 	const [messages, setMessages] = useState({ greeting: '', blurb: '' })
+	const [settingsOpen, setSettingsOpen] = useState({ open: false, document: null })
+	const [confirmDelete, setConfirmDelete] = useState(false);
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
 	const createDocTitleRef = useRef(null)
 
+	async function requestDocuments() {
+		setSnackbarCount(snackbarCount + 1)
+
+		const response = await fetch('http://localhost:5000/api/get-docs', {
+			method: 'post',
+			body: JSON.stringify({
+				sessionId: user.sessionId,
+				userId: user.accountId
+			}),
+			headers: { 'Content-Type': 'application/json' }
+		})
+
+		const data = await response.json()
+
+		if (response.status !== 200) {
+			enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
+				variant: 'error',
+				persist: true,
+				key: 'LOGIN_' + snackbarCount,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+			})
+		}
+
+		setDocuments({ loaded: true, list: data })
+	}
+
 	useEffect(() => {
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
-		(async () => {
-			setSnackbarCount(snackbarCount + 1)
 
-			const response = await fetch('http://localhost:5000/api/get-docs', {
+		(async () => {
+			await requestDocuments()
+		})()
+
+		const openSettings = (e) => {
+			console.log(JSON.stringify(e.detail));
+
+			// setAnchorEl(e.currentTarget);
+			setSettingsOpen({ open: true, document: e.detail })
+		}
+
+		document.addEventListener('on:open-doc-settings', openSettings);
+
+		return () => {
+			document.removeEventListener('on:open-doc-settings', openSettings);
+		}
+	}, [])
+
+	const createDocument = async () => {
+		setSnackbarCount(snackbarCount + 1)
+
+		try {
+			const response = await fetch('http://localhost:5000/api/create-doc', {
 				method: 'post',
 				body: JSON.stringify({
+					title: createDocTitleRef.current.value,
 					sessionId: user.sessionId,
 					userId: user.accountId
 				}),
@@ -110,31 +196,14 @@ export default function Dashboard() {
 
 			const data = await response.json()
 
-			if (response.status !== 200) {
-				enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
-					variant: 'error',
-					persist: true,
-					key: 'LOGIN_' + snackbarCount,
-					action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
-				})
-			}
-
-			// uncomment these lines to test loading work.
-			// setTimeout(() =>
-			setDocuments({ loaded: true, list: data })
-			// , 5000)
-		})()
-	}, [])
-
-	const createDocument = async () => {
-		setSnackbarCount(snackbarCount + 1)
-
-		try {
-			enqueueSnackbar(`Created doc '${createDocTitleRef.current.value}'`, {
+			enqueueSnackbar(response.status === 200 ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${data.name}`, {
 				variant: 'success',
+				persist: false,
 				key: 'LOGIN_' + snackbarCount,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
 			})
+
+			if (response.status === 200) await requestDocuments();
 		} finally {
 			setOpenCreateDoc(false)
 		}
@@ -186,6 +255,73 @@ export default function Dashboard() {
 				<DialogActions>
 					<Button variant="text" onClick={() => setOpenCreateDoc(false)}>Cancel</Button>
 					<Button variant="contained" onClick={createDocument}>Done</Button>
+				</DialogActions>
+			</Dialog>
+
+			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth={true} onClose={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
+				<div className="Dashboard-Note-Settings-top">
+					<DialogTitle>Your Document</DialogTitle>
+					<div style={{ flexGrow: 1 }}></div>
+					<IconButton sx={{ margin: '1rem' }} onClick={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
+						<CloseIcon />
+					</IconButton>
+				</div>
+				<Divider />
+				<List>
+					<ListItem>
+						<ListItemText>
+							Title: {settingsOpen.document?.title}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Last Opened: {settingsOpen.document?.lastUpdated}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Created At: {settingsOpen.document?.createdAt}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Unique Id: {settingsOpen.document?.documentId}
+						</ListItemText>
+					</ListItem>
+
+					<Divider />
+					<ListItem button onClick={() => {
+						setConfirmDelete(true)
+					}}>
+						<ListItemIcon>
+							<DeleteForeverIcon />
+						</ListItemIcon>
+						<ListItemText>
+							Delete
+						</ListItemText>
+					</ListItem>
+					<ListItem button onClick={() => {
+
+					}}>
+						<ListItemIcon>
+							<DriveFileRenameOutlineIcon />
+						</ListItemIcon>
+						<ListItemText>
+							Rename
+						</ListItemText>
+					</ListItem>
+				</List>
+			</Dialog>
+
+			<Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+				<DialogTitle>Delete "{settingsOpen.document?.title}"</DialogTitle>
+				<DialogContentText sx={{ marginLeft: '2rem', marginRight: '2rem' }}>You are about to delete a document. Please make sure you meant to do this; deleting a document is permanent!</DialogContentText>
+				<DialogActions>
+					<Button variant="outlined" color="error">Delete</Button>
+					<Button variant="contained" onClick={() => setConfirmDelete(false)}>Cancel</Button>
 				</DialogActions>
 			</Dialog>
 		</>
