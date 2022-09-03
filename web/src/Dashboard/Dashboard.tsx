@@ -1,4 +1,4 @@
-import { forwardRef, ReactElement, useContext, useEffect, useRef, useState } from 'react'
+import { forwardRef, ReactElement, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
 import {
@@ -105,8 +105,12 @@ const Note = () => {
 	)
 }
 
+function validateTitle(title: string): boolean {
+	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title);
+}
+
 function sanitizeList(list: any[]) {
-	return list.map((e, i) => <Card sx={{ margin: '1rem' }} key={i}>{e}</Card>)
+	return list.map((e, i) => <ListItem button key={i} sx={{ padding: 0 }}> <Card sx={{ margin: '1rem', width: '100%' }}>{e}</Card></ListItem >)
 }
 
 const Transition = forwardRef(function Transition(
@@ -132,8 +136,9 @@ export default function Dashboard() {
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
 	const createDocTitleRef = useRef(null)
+	const renameDocRef = useRef(null)
 
-	async function requestDocuments() {
+	const requestDocuments = useCallback(async function () {
 		setSnackbarCount(snackbarCount + 1)
 
 		const response = await fetch('http://localhost:5000/api/get-docs', {
@@ -157,9 +162,11 @@ export default function Dashboard() {
 		}
 
 		setDocuments({ loaded: true, list: data })
-	}
+	}, [])
 
 	useEffect(() => {
+		console.log('@');
+
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
 
 		(async () => {
@@ -178,7 +185,7 @@ export default function Dashboard() {
 		return () => {
 			document.removeEventListener('on:open-doc-settings', openSettings);
 		}
-	}, [])
+	}, [requestDocuments])
 
 	const createDocument = async () => {
 		setSnackbarCount(snackbarCount + 1)
@@ -208,6 +215,7 @@ export default function Dashboard() {
 			setOpenCreateDoc(false)
 		}
 	}
+
 	return (
 		<>
 			<motion.div
@@ -293,6 +301,55 @@ export default function Dashboard() {
 					</ListItem>
 
 					<Divider />
+					<ListItem>
+						<ListItemIcon>
+							<DriveFileRenameOutlineIcon />
+						</ListItemIcon>
+						<TextField
+							// helperText={`${renameDocRef.current.value.length}/64`}
+							inputRef={renameDocRef} autoFocus variant="standard" defaultValue={settingsOpen.document?.title} />
+						<Button
+							onClick={async () => {
+								setSnackbarCount(snackbarCount + 1)
+
+								if (!validateTitle(renameDocRef.current.value)) {
+									enqueueSnackbar('Cannot set this as a title!', {
+										variant: 'error',
+										persist: false,
+										key: 'LOGIN_' + snackbarCount,
+										action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+									})
+									return;
+								}
+
+								const response = await fetch('http://localhost:5000/api/rename-doc', {
+									method: 'post',
+									body: JSON.stringify({
+										documentId: settingsOpen?.document?.documentId,
+										sessionId: user.sessionId,
+										userId: user.accountId,
+										title: renameDocRef.current.value
+									}),
+									headers: { 'Content-Type': 'application/json' }
+								})
+
+								const data = await response.json()
+								const success = response.status === 200
+
+								enqueueSnackbar(success ? `New name: '${data.title}'` : `Error: ${data.name}`, {
+									variant: success ? 'success' : 'error',
+									persist: !success,
+									key: 'LOGIN_' + snackbarCount,
+									action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+								})
+
+								if (success) {
+									await requestDocuments()
+									setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: data.title } })
+								}
+							}}>Rename</Button>
+					</ListItem>
+
 					<ListItem button onClick={() => {
 						setConfirmDelete(true)
 					}}>
@@ -301,16 +358,6 @@ export default function Dashboard() {
 						</ListItemIcon>
 						<ListItemText>
 							Delete
-						</ListItemText>
-					</ListItem>
-					<ListItem button onClick={() => {
-
-					}}>
-						<ListItemIcon>
-							<DriveFileRenameOutlineIcon />
-						</ListItemIcon>
-						<ListItemText>
-							Rename
 						</ListItemText>
 					</ListItem>
 				</List>

@@ -29,7 +29,7 @@ export async function validateSession(sessionId, userId) {
 	})
 
 	if (userIdOfSession === null || userIdOfSession?.userId !== userId) {
-		return false
+		throw new CaughtApiException("Invalid session id")
 	}
 
 	return userIdOfSession.userId
@@ -56,6 +56,41 @@ export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
 			lastUpdated: 'desc'
 		}
 	})
+}
+
+function validateTitle(title: string): boolean {
+	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title);
+}
+
+export async function renameDocument({ sessionId, userId, title, documentId }: CreateDocParams & DeleteDocParams, ctx?: Context) {
+	if (!validateTitle(title))
+		throw new CaughtApiException("Invalid title")
+
+	const userIdOfSession = await validateSession(sessionId, userId);
+
+	try {
+		const id = await (ctx?.prisma ?? prisma).document.update({
+			where: {
+				documentId: documentId
+			},
+			data: {
+				title: title,
+				lastUpdated: new Date()
+			},
+			select: {
+				documentId: true,
+				title: true
+			}
+		})
+
+		return id
+	} catch (e) {
+		if (e?.code === 'P2025') { // RecordNotFoundError
+			throw new CaughtApiException('Document does not exist for user.')
+		} else {
+			throw e
+		}
+	}
 }
 
 export async function deleteDocument({ sessionId, userId, documentId }: DeleteDocParams, ctx?: Context) {
@@ -87,6 +122,9 @@ export async function deleteDocument({ sessionId, userId, documentId }: DeleteDo
  * @todo
  */
 export async function createDocument({ sessionId, userId, title }: CreateDocParams, ctx?: Context) {
+	if (!validateTitle(title))
+		throw new CaughtApiException("Invalid title")
+
 	const userIdOfSession = await validateSession(sessionId, userId);
 
 	if (!userIdOfSession)

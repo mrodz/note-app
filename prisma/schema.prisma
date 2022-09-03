@@ -28,7 +28,7 @@ model Session {
 
 model Document {
   documentId  String   @unique @default(uuid())
-  title       String
+  title       String   @db.VarChar(64)
   preview     String?  @db.VarChar(16)
   content     String   @db.VarChar(1500)
   createdAt   DateTime @default(now())
