@@ -14,6 +14,10 @@ export interface CreateDocParams extends DocumentActionAuth {
 	title: string
 }
 
+export interface DeleteDocParams extends DocumentActionAuth {
+	documentId: string
+}
+
 export async function validateSession(sessionId, userId) {
 	const userIdOfSession = await prisma.session.findUnique({
 		where: {
@@ -30,7 +34,6 @@ export async function validateSession(sessionId, userId) {
 
 	return userIdOfSession.userId
 }
-
 export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
 	const userIdOfSession = await validateSession(sessionId, userId);
 
@@ -55,6 +58,30 @@ export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
 	})
 }
 
+export async function deleteDocument({ sessionId, userId, documentId }: DeleteDocParams, ctx?: Context) {
+	const userIdOfSession = await validateSession(sessionId, userId);
+
+	try {
+		const deletedDocument = await (ctx?.prisma ?? prisma).document.delete({
+			where: {
+				documentId: documentId
+			},
+			select: {
+				title: true,
+				documentId: true
+			}
+		})
+
+		return deletedDocument
+	} catch (e) {
+		if (e?.code === 'P2025') { // RecordNotFoundError
+			throw new CaughtApiException('Document does not exist for user.')
+		} else {
+			throw e
+		}
+	}
+}
+
 /**
  * Create a document for a user. Requires a valid `sessionID` to authenticate.
  * @todo
@@ -65,7 +92,7 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	if (!userIdOfSession)
 		throw new CaughtApiException("Invalid session ID")
 
-	let count = await prisma.document.findMany({
+	let count = await (ctx?.prisma ?? prisma).document.findMany({
 		where: {
 			userId: userId,
 			title: title
@@ -77,7 +104,7 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 		throw new CaughtApiException("A document with this title already exists!")
 	}
 
-	const document = await prisma.document.create({
+	const document = await (ctx?.prisma ?? prisma).document.create({
 		data: {
 			content: '',
 			title: title,

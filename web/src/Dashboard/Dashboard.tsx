@@ -318,9 +318,40 @@ export default function Dashboard() {
 
 			<Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
 				<DialogTitle>Delete "{settingsOpen.document?.title}"</DialogTitle>
-				<DialogContentText sx={{ marginLeft: '2rem', marginRight: '2rem' }}>You are about to delete a document. Please make sure you meant to do this; deleting a document is permanent!</DialogContentText>
+				<DialogContentText sx={{ marginLeft: '2rem', marginRight: '2rem' }}>
+					You are about to delete a document. Please make sure you meant to do this; deleting a document is permanent!
+				</DialogContentText>
 				<DialogActions>
-					<Button variant="outlined" color="error">Delete</Button>
+					<Button variant="outlined" onClick={async () => {
+						setSnackbarCount(snackbarCount + 1)
+
+						try {
+							const response = await fetch('http://localhost:5000/api/delete-doc', {
+								method: 'post',
+								body: JSON.stringify({
+									documentId: settingsOpen?.document?.documentId,
+									sessionId: user.sessionId,
+									userId: user.accountId
+								}),
+								headers: { 'Content-Type': 'application/json' }
+							})
+
+							const data = await response.json()
+							const success = response.status === 200
+
+							enqueueSnackbar(success ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${data.name}`, {
+								variant: success ? 'success' : 'error',
+								persist: !success,
+								key: 'LOGIN_' + snackbarCount,
+								action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + snackbarCount) }}>{"×"}</Button>
+							})
+
+							if (success) await requestDocuments()
+						} finally {
+							setConfirmDelete(false)
+							setSettingsOpen({ open: false, document: null })
+						}
+					}} color="error">Delete</Button>
 					<Button variant="contained" onClick={() => setConfirmDelete(false)}>Cancel</Button>
 				</DialogActions>
 			</Dialog>

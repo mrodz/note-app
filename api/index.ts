@@ -9,7 +9,7 @@ import fetch from 'node-fetch'
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
-import { CreateDocParams, createDocument, getDocuments } from './documentActions'
+import { CreateDocParams, createDocument, DeleteDocParams, deleteDocument, getDocuments } from './documentActions'
 
 const app = express()   // create ExpressJS app
 app.use(express.json()) // allow POST requests to take JSON inputs.
@@ -148,6 +148,20 @@ SERVER: {
 			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
 		}
 	})
+
+	app.post('/api/delete-doc', async (req: ModelRequest<DeleteDocParams>, res: ModelResponse) => {
+		const body = req.body;
+		try {
+			let user = await deleteDocument(body);
+
+			res.send(user)
+		} catch (documentError) {
+			console.log(documentError);
+
+			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
+		}
+	})
+
 	/// END Endpoints
 
 	// Hoist the app
