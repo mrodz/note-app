@@ -30,6 +30,7 @@ import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutli
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
+import { ThrottledCallback } from '../App';
 
 function getGreeting(hour: number = new Date().getHours()): string {
 	if (hour >= 19 || hour < 5) return "Good Evening"
@@ -135,7 +136,8 @@ export default function Dashboard() {
 	const [openCreateDoc, setOpenCreateDoc] = useState(false)
 	const [messages, setMessages] = useState({ greeting: '', blurb: '' })
 	const [settingsOpen, setSettingsOpen] = useState({ open: false, document: null })
-	const [confirmDelete, setConfirmDelete] = useState(false);
+	const [confirmDelete, setConfirmDelete] = useState(false)
+	const [settingsRenameText, setSettingsRenameText] = useState('')
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
@@ -154,7 +156,7 @@ export default function Dashboard() {
 
 		const data = await response.json()
 		if (response.status !== 200) {
-			const key = 'LOGIN_' + Math.random()
+			const key = 'DASHBOARD_' + Math.random()
 			enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
 				variant: 'error',
 				persist: true,
@@ -176,7 +178,12 @@ export default function Dashboard() {
 		})()
 
 		const openSettings = (e) => {
-			setSettingsOpen({ open: true, document: e.detail })
+			console.log(JSON.stringify(e.detail));
+
+			setSettingsOpen({ open: true, document: e.detail });
+			setSettingsRenameText(e.detail.title);
+
+			console.log(JSON.stringify(settingsOpen))
 		}
 
 		document.addEventListener('on:open-doc-settings', openSettings);
@@ -186,10 +193,14 @@ export default function Dashboard() {
 		}
 	}, [requestDocuments])
 
+	useEffect(() => {
+		console.log(settingsOpen);
+	}, [settingsOpen])
+
 	const createDocument = async () => {
 		try {
 			if (!validateTitle(createDocTitleRef.current.value)) {
-				const key = 'LOGIN_' + Math.random()
+				const key = 'DASHBOARD_' + Math.random()
 				enqueueSnackbar('Cannot set this as a title!', {
 					variant: 'error',
 					persist: true,
@@ -214,7 +225,7 @@ export default function Dashboard() {
 			const success = response.status === 200
 
 			closeSnackbar()
-			const key = 'LOGIN_' + Math.random()
+			const key = 'DASHBOARD_' + Math.random()
 			enqueueSnackbar(success ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${data.name}`, {
 				variant: success ? 'success' : 'error',
 				persist: false,
@@ -227,6 +238,60 @@ export default function Dashboard() {
 			setOpenCreateDoc(false)
 		}
 	}
+
+	const renameButton = useCallback(async function () {
+		console.log(JSON.stringify(settingsOpen))
+
+		if (!validateTitle(renameDocRef.current.value)) {
+			const key = 'DASHBOARD_' + Math.random()
+			enqueueSnackbar('Cannot set this as a title!', {
+				variant: 'error',
+				persist: false,
+				key: key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+			})
+			return;
+		}
+
+		if (renameDocRef.current.value === settingsOpen.document?.title) {
+			const key = 'DASHBOARD_' + Math.random()
+			enqueueSnackbar('This is already the title!', {
+				variant: 'error',
+				persist: false,
+				key: key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+			})
+			return;
+		}
+
+		const response = await fetch('http://localhost:5000/api/rename-doc', {
+			method: 'post',
+			body: JSON.stringify({
+				documentId: settingsOpen?.document.documentId,
+				sessionId: user.sessionId,
+				userId: user.accountId,
+				title: renameDocRef.current.value
+			}),
+			headers: { 'Content-Type': 'application/json' }
+		})
+
+		const data = await response.json()
+		const success = response.status === 200
+
+		closeSnackbar()
+		const key = 'DASHBOARD_' + Math.random()
+		enqueueSnackbar(success ? `New name: '${data.title}'` : `Error: ${data.name}`, {
+			variant: success ? 'success' : 'error',
+			persist: !success,
+			key: key,
+			action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+		})
+
+		if (success) {
+			await requestDocuments()
+			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: data.title } })
+		}
+	}, [renameDocRef, settingsOpen, closeSnackbar, enqueueSnackbar, requestDocuments, user.accountId, user.sessionId])
 
 	return (
 		<>
@@ -319,59 +384,19 @@ export default function Dashboard() {
 						</ListItemIcon>
 						<TextField
 							// helperText={`${renameDocRef.current.value.length}/64`}
-							inputRef={renameDocRef} autoFocus variant="standard" defaultValue={settingsOpen.document?.title} />
+							inputRef={renameDocRef} autoFocus variant="standard"
+							defaultValue={settingsOpen.document?.title}
+							onChange={() => setSettingsRenameText(renameDocRef.current.value)}
+						/>
 						<Button
-							onClick={async () => {
-								if (!validateTitle(renameDocRef.current.value)) {
-									const key = 'LOGIN_' + Math.random()
-									enqueueSnackbar('Cannot set this as a title!', {
-										variant: 'error',
-										persist: false,
-										key: key,
-										action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-									})
-									return;
-								}
-
-								if (renameDocRef.current.value === settingsOpen.document.title) {
-									const key = 'LOGIN_' + Math.random()
-									enqueueSnackbar('This is already the title!', {
-										variant: 'error',
-										persist: false,
-										key: key,
-										action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-									})
-									return;
-								}
-
-								const response = await fetch('http://localhost:5000/api/rename-doc', {
-									method: 'post',
-									body: JSON.stringify({
-										documentId: settingsOpen?.document?.documentId,
-										sessionId: user.sessionId,
-										userId: user.accountId,
-										title: renameDocRef.current.value
-									}),
-									headers: { 'Content-Type': 'application/json' }
-								})
-
-								const data = await response.json()
-								const success = response.status === 200
-
-								closeSnackbar()
-								const key = 'LOGIN_' + Math.random()
-								enqueueSnackbar(success ? `New name: '${data.title}'` : `Error: ${data.name}`, {
-									variant: success ? 'success' : 'error',
-									persist: !success,
-									key: key,
-									action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-								})
-
-								if (success) {
-									await requestDocuments()
-									setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: data.title } })
-								}
-							}}>Rename</Button>
+							disabled={
+								settingsRenameText.length === 0 ||
+								settingsRenameText.replace(/^\s+|\s+$|\s(?=\s)/gi, '') === settingsOpen.document?.title ||
+								/^\s+$/.test(settingsRenameText)
+							}
+							variant="contained"
+							sx={{ marginLeft: '1rem' }}
+							onClick={renameButton}>Rename</Button>
 					</ListItem>
 
 					<ListItem button onClick={() => {
@@ -409,7 +434,7 @@ export default function Dashboard() {
 							const success = response.status === 200
 
 							closeSnackbar()
-							const key = 'LOGIN_' + Math.random()
+							const key = 'DASHBOARD_' + Math.random()
 							enqueueSnackbar(success ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${data.name}`, {
 								variant: success ? 'success' : 'error',
 								persist: !success,

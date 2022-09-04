@@ -70,12 +70,24 @@ export async function renameDocument({ sessionId, userId, title, documentId }: C
 	const userIdOfSession = await validateSession(sessionId, userId);
 
 	try {
+		// const count = await (ctx?.prisma ?? prisma).document.count({
+		// 	where: {
+		// 		title: title
+		// 	}
+		// })
+
+		// if (count !== 0)
+		// 	throw new CaughtApiException("A document with this title already exists!");
+
+		console.log('#', documentId);
+
 		const id = await (ctx?.prisma ?? prisma).document.update({
 			where: {
 				documentId: documentId
+				// documentId: documentId,
 			},
 			data: {
-				title: title,
+				title: title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''),
 				lastUpdated: new Date()
 			},
 			select: {
