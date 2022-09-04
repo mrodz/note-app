@@ -34,6 +34,7 @@ export async function validateSession(sessionId, userId) {
 
 	return userIdOfSession.userId
 }
+
 export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
 	const userIdOfSession = await validateSession(sessionId, userId);
 
@@ -152,25 +153,4 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	})
 
 	return { documentId: document.documentId };
-	// const documents = await prisma.user.update({
-	// 	where: {
-	// 		id: userId
-	// 	},
-	// 	data: {
-	// 		documents: {
-	// 			create: {
-	// 				...document,
-	// 				preview: null
-	// 			}
-	// 		},
-	// 		documentCount: {
-	// 			increment: 1
-	// 		}
-	// 	},
-	// 	select: {
-	// 		documents: true
-	// 	}
-	// })
-
-	// return documents // fixme
 }

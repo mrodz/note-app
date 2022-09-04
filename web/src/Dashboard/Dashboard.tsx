@@ -62,12 +62,17 @@ function notesFromDocuments(documents) {
 		const today = new Date();
 		const lastUpdated = new Date(e.lastUpdated)
 
+		const fixMinutes = (n: number) => {
+			if (n > 10) return n
+			return '0' + n
+		}
+
 		const lastUpdatedString = (() => {
 			if (lastUpdated.getUTCDate() !== today.getUTCDate())
 				return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
 
 			const hours = lastUpdated.getHours()
-			return `${hours > 12 ? hours - 12 : hours}:${lastUpdated.getMinutes()} ${hours < 12 ? "AM" : "PM"}`
+			return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
 		})()
 
 		return (
