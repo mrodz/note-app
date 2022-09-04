@@ -35,14 +35,46 @@ export async function validateSession(sessionId, userId) {
 	return userIdOfSession.userId
 }
 
+async function userOwnsDocument(documentId, userId, ctx?: Context): Promise<Document | undefined> {
+	try {
+		const document = await (ctx?.prisma ?? prisma).document.findUniqueOrThrow({
+			where: {
+				documentId: documentId
+			}
+		})
+
+		if (document.userId === userId) return document;
+
+		return void document;
+	} catch (e) {
+		if (e?.code === 'P2025') { // RecordNotFoundError
+			throw new CaughtApiException('Document does not exist for user.')
+		} else {
+			throw e
+		}
+	}
+}
+
+export async function getDocument({ sessionId, userId, documentId }: DocumentActionAuth & { documentId: string }, ctx?: Context) {
+	const userIdOfSession = await validateSession(sessionId, userId)
+
+	const document = await userOwnsDocument(documentId, userId, ctx);
+
+	if (document === undefined)
+		throw new CaughtApiException('Access denied', `User ${userId} does not have access to document # ${documentId}`)
+
+	const { preview, ...result } = document
+	return result
+}
+
 export async function getDocuments({ sessionId, userId }: DocumentActionAuth) {
-	const userIdOfSession = await validateSession(sessionId, userId);
+	const userIdOfSession = await validateSession(sessionId, userId)
 
 	if (!userIdOfSession)
 		throw new CaughtApiException("Invalid session ID")
 
 	return await prisma.document.findMany({
-		take: 10,
+		// take: 10,
 		where: {
 			userId: userIdOfSession
 		},
@@ -120,6 +152,17 @@ export async function deleteDocument({ sessionId, userId, documentId }: DeleteDo
 			}
 		})
 
+		await (ctx?.prisma ?? prisma).user.update({
+			where: {
+				id: userIdOfSession
+			},
+			data: {
+				documentCount: {
+					decrement: 1
+				}
+			}
+		})
+
 		return deletedDocument
 	} catch (e) {
 		if (e?.code === 'P2025') { // RecordNotFoundError
@@ -161,6 +204,17 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 			title: title,
 			preview: null,
 			userId: userIdOfSession
+		}
+	})
+
+	await (ctx?.prisma ?? prisma).user.update({
+		where: {
+			id: userIdOfSession
+		},
+		data: {
+			documentCount: {
+				increment: 1
+			}
 		}
 	})
 

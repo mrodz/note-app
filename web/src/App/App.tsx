@@ -10,6 +10,7 @@ import { Context, LocalStorageSessionInfo } from '../AccountContext';
 import AppHeading from './AppHeading';
 import Dashboard from '../Dashboard/Dashboard';
 import { AnimatePresence } from 'framer-motion'
+import UserDocument from '../Documents/Document';
 
 function App() {
   const LoginTheme = createTheme({
@@ -38,6 +39,7 @@ function App() {
             <Route path='/login' element={<Login />} />
             <Route path='/register' element={<Register />} />
             <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
+            <Route path='/d/:id' element={user?.sessionId ? <UserDocument /> : <Navigate replace to="/login" />} />
           </Routes>
         </AnimatePresence>
       </div>

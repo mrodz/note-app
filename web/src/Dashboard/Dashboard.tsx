@@ -31,6 +31,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
 import { ThrottledCallback } from '../App';
+import { useNavigate } from 'react-router';
+import { Link } from 'react-router-dom';
 
 function getGreeting(hour: number = new Date().getHours()): string {
 	if (hour >= 19 || hour < 5) return "Good Evening"
@@ -58,7 +60,7 @@ function trimString(str: string): string {
 	return str
 }
 
-function notesFromDocuments(documents) {
+function notesFromDocuments(documents, navigate) {
 	return documents?.map?.(e => {
 		const today = new Date();
 		const lastUpdated = new Date(e.lastUpdated)
@@ -76,27 +78,33 @@ function notesFromDocuments(documents) {
 			return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
 		})()
 
+		function openDocument() {
+			navigate(`/d/${e.documentId}`)
+		}
+
 		return (
-			<div className="Dashboard-Note">
-				<div className='Dashboard-Note-top'>
-					<div>
-						<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
-						<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-							<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+			<ListItem sx={{ padding: 0 }} button onClick={openDocument}>
+				<div className="Dashboard-Note">
+					<div className='Dashboard-Note-top'>
+						<div>
+							<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
+							<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+								<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+							</div>
+						</div>
+						<div style={{ flexGrow: 1 }}></div>
+						<div>
+							<IconButton onClick={() => document.dispatchEvent(new CustomEvent('on:open-doc-settings', {
+								detail: e
+							}))}>
+								<MoreVertIcon />
+							</IconButton>
 						</div>
 					</div>
-					<div style={{ flexGrow: 1 }}></div>
-					<div>
-						<IconButton onClick={() => document.dispatchEvent(new CustomEvent('on:open-doc-settings', {
-							detail: e
-						}))}>
-							<MoreVertIcon />
-						</IconButton>
-					</div>
+					<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
+					<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.content)}</Typography>
 				</div>
-				<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-				<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.content)}</Typography>
-			</div>
+			</ListItem>
 		)
 	})
 }
@@ -104,7 +112,7 @@ function notesFromDocuments(documents) {
 const Note = () => {
 	return (
 		<div className="Dashboard-Note">
-			<Skeleton variant="rectangular" height="5rem"></Skeleton>
+			<Skeleton variant="rectangular" height="5rem" width="70%"></Skeleton>
 			<Skeleton width="70%"></Skeleton>
 			<Skeleton width="30%"></Skeleton>
 		</div>
@@ -116,7 +124,7 @@ function validateTitle(title: string): boolean {
 }
 
 function sanitizeList(list: any[]) {
-	return list.map((e, i) => <ListItem button key={i} sx={{ padding: 0 }}> <Card sx={{ margin: '1rem', width: '100%' }}>{e}</Card></ListItem >)
+	return list.map((e, i) => <Card sx={{ margin: '1rem' }} key={i}>{e}</Card>)
 }
 
 const Transition = forwardRef(function Transition(
@@ -128,6 +136,17 @@ const Transition = forwardRef(function Transition(
 	return <Slide direction="up" ref={ref} {...props} />;
 });
 
+const l = function <T>(arg0: T): T {
+	console.log(arg0)
+	return arg0
+}
+
+/**
+ * # Known issues:
+ * - The amount of skeleton documents shown during loading
+ *   is only calculated on user sign in, and does not reflect
+ *   changes created during this session.
+ */
 export default function Dashboard() {
 	const user = useContext(Context)
 
@@ -165,7 +184,9 @@ export default function Dashboard() {
 			})
 		}
 
+		// setTimeout(() =>
 		setDocuments({ loaded: true, list: data })
+		// , 5000)
 	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId])
 
 	useEffect(() => {
@@ -240,8 +261,6 @@ export default function Dashboard() {
 	}
 
 	const renameButton = useCallback(async function () {
-		console.log(JSON.stringify(settingsOpen))
-
 		if (!validateTitle(renameDocRef.current.value)) {
 			const key = 'DASHBOARD_' + Math.random()
 			enqueueSnackbar('Cannot set this as a title!', {
@@ -293,6 +312,8 @@ export default function Dashboard() {
 		}
 	}, [renameDocRef, settingsOpen, closeSnackbar, enqueueSnackbar, requestDocuments, user.accountId, user.sessionId])
 
+	const navigate = useNavigate()
+
 	return (
 		<>
 			<motion.div
@@ -317,7 +338,7 @@ export default function Dashboard() {
 				</div>
 				{(!documents.loaded || documents?.list?.length > 0)
 					? <div className="Dashboard-notes">
-						{sanitizeList(!documents.loaded ? Array(Number(user?.documentCount)).fill(<Note />) : notesFromDocuments(documents.list))}
+						{sanitizeList(!documents.loaded ? Array(Number(l(user?.documentCount))).fill(<Note />) : notesFromDocuments(documents.list, navigate))}
 					</div>
 					: <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
 						You don&apos;t have have any documents yet!
