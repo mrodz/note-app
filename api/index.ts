@@ -3,7 +3,6 @@ import cors from 'cors'
 import winston from 'winston'
 import { PrismaClient } from './generated/client'
 import 'dotenv/config'
-import sha256 from 'crypto-js/sha256'
 import fetch from 'node-fetch'
 
 // ENDPOINTS
