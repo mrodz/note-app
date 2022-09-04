@@ -1,9 +1,21 @@
-import { Button, TextareaAutosize } from "@mui/material"
+import { Button, Typography } from "@mui/material"
 import { useSnackbar } from "notistack"
 import { useContext, useEffect, useState } from "react"
-import { useParams } from "react-router"
+import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
-import "./Dashboard.scss"
+import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
+import "./Document.scss"
+
+function AccessDenied() {
+	return (
+		<div className="Document-AccessDenied">
+			<DoNotTouchIcon sx={{ fontSize: '150pt' }} htmlColor="#abb0ac" />
+			<Typography variant="h3">Whoops! Nothing to see here.</Typography>
+			<Typography variant="h6">You lack access to this document.</Typography>
+
+		</div>
+	)
+}
 
 export default function UserDocument() {
 	const user = useContext(Context)
@@ -11,8 +23,14 @@ export default function UserDocument() {
 	const params = useParams()
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 	const [documentContent, setDocumentContent] = useState('')
+	const [error, setError] = useState<any>({})
+	const navigate = useNavigate()
 
 	useEffect(() => {
+		if (!user?.sessionId) {
+			navigate(`/login?next=/d/${params.id}`)
+			return
+		};
 
 		(async () => {
 			const response = await fetch('http://localhost:5000/api/load-doc', {
@@ -39,18 +57,33 @@ export default function UserDocument() {
 
 			if (success) {
 				setDocumentContent(data.content)
+			} else {
+				setError(data)
 			}
 		})()
-	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId, params.id])
+	}, [closeSnackbar, enqueueSnackbar, user?.accountId, user?.sessionId, params?.id])
+
+	const l = (a) => {
+		return a
+	}
 
 	return (
-		<div className="Document">
-			<div className="Document-tray">
-				<div>
-					Tray
-				</div>
-				<textarea className="Document-textarea" placeholder="Empty document" defaultValue={documentContent} />
-			</div>
-		</div>
+		<>
+			{user?.sessionId ? (
+				<>{
+					!('name' in error) ? (
+						<div className="Document">
+
+							<div className="Document-tray">
+								<div>
+									Tray
+								</div>
+								<textarea className="Document-textarea" placeholder="Empty document" defaultValue={documentContent} />
+							</div>
+						</div>
+					) : <AccessDenied />
+				}</>
+			) : "Please sign in."}
+		</>
 	)
 }

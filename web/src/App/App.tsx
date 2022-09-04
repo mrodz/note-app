@@ -39,7 +39,7 @@ function App() {
             <Route path='/login' element={<Login />} />
             <Route path='/register' element={<Register />} />
             <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
-            <Route path='/d/:id' element={user?.sessionId ? <UserDocument /> : <Navigate replace to="/login" />} />
+            <Route path='/d/:id' element={<UserDocument />} />
           </Routes>
         </AnimatePresence>
       </div>

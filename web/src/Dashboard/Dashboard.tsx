@@ -35,17 +35,17 @@ import { useNavigate } from 'react-router';
 import { Link } from 'react-router-dom';
 
 function getGreeting(hour: number = new Date().getHours()): string {
-	if (hour >= 19 || hour < 5) return "Good Evening"
-	if (hour >= 5 && hour < 12) return "Good Morning"
-	if (hour >= 12 && hour < 19) return "Good Afternoon"
+	if (hour >= 19 || hour < 5) return "good evening"
+	if (hour >= 5 && hour < 12) return "good morning"
+	if (hour >= 12 && hour < 19) return "good afternoon"
 }
 
 const blurbs = {
 	0: "Here's what you've been working on",
 	1: "Look at all your beautiful thoughts",
-	2: "Let those creative juices flow!",
+	2: "Let those creative juices flow",
 	3: "Just keep writing, Just keep writing...",
-	4: "Look at all this writing!"
+	4: "Look at all this writing"
 }
 
 function getBlurb(): string {
@@ -58,55 +58,6 @@ function trimString(str: string): string {
 		return str.substring(0, 11) + '...'
 	}
 	return str
-}
-
-function notesFromDocuments(documents, navigate) {
-	return documents?.map?.(e => {
-		const today = new Date();
-		const lastUpdated = new Date(e.lastUpdated)
-
-		const fixMinutes = (n: number) => {
-			if (n > 10) return n
-			return '0' + n
-		}
-
-		const lastUpdatedString = (() => {
-			if (lastUpdated.getUTCDate() !== today.getUTCDate())
-				return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
-
-			const hours = lastUpdated.getHours()
-			return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
-		})()
-
-		function openDocument() {
-			navigate(`/d/${e.documentId}`)
-		}
-
-		return (
-			<ListItem sx={{ padding: 0 }} button onClick={openDocument}>
-				<div className="Dashboard-Note">
-					<div className='Dashboard-Note-top'>
-						<div>
-							<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
-							<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-								<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
-							</div>
-						</div>
-						<div style={{ flexGrow: 1 }}></div>
-						<div>
-							<IconButton onClick={() => document.dispatchEvent(new CustomEvent('on:open-doc-settings', {
-								detail: e
-							}))}>
-								<MoreVertIcon />
-							</IconButton>
-						</div>
-					</div>
-					<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-					<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.content)}</Typography>
-				</div>
-			</ListItem>
-		)
-	})
 }
 
 const Note = () => {
@@ -137,7 +88,7 @@ const Transition = forwardRef(function Transition(
 });
 
 const l = function <T>(arg0: T): T {
-	console.log(arg0)
+	console.trace(arg0)
 	return arg0
 }
 
@@ -157,11 +108,69 @@ export default function Dashboard() {
 	const [settingsOpen, setSettingsOpen] = useState({ open: false, document: null })
 	const [confirmDelete, setConfirmDelete] = useState(false)
 	const [settingsRenameText, setSettingsRenameText] = useState('')
+	const [settingFocus, setSettingFocus] = useState(false)
 
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
 	const createDocTitleRef = useRef(null)
 	const renameDocRef = useRef(null)
+
+	function notesFromDocuments(documents, navigate) {
+		return documents?.map?.(e => {
+			// const [settingsActive, setSettingsActive] = useState(false)
+
+			const today = new Date();
+			const lastUpdated = new Date(e.lastUpdated)
+
+			const fixMinutes = (n: number) => {
+				if (n > 10) return n
+				return '0' + n
+			}
+
+			const lastUpdatedString = (() => {
+				if (lastUpdated.getUTCDate() !== today.getUTCDate())
+					return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
+
+				const hours = lastUpdated.getHours()
+				return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
+			})()
+
+			function openDocument() {
+				navigate(`/d/${e.documentId}`)
+			}
+
+			return (
+				<ListItem className='Dashboard-Note-clickable' sx={{ padding: 0 }} button onClick={() => {
+					if (!settingFocus) openDocument()
+				}}>
+					<div className="Dashboard-Note">
+						<div className='Dashboard-Note-top'>
+							<div>
+								<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
+								<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+									<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+								</div>
+							</div>
+							<div style={{ flexGrow: 1 }}></div>
+							<div>
+								<IconButton
+									className="Dashboard-Note-togglesettings"
+									onClick={(event) => {
+										event.stopPropagation()
+										document.dispatchEvent(new CustomEvent('on:open-doc-settings', { detail: e }))
+									}}
+								>
+									<MoreVertIcon />
+								</IconButton>
+							</div>
+						</div>
+						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
+						<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.content)}</Typography>
+					</div>
+				</ListItem>
+			)
+		})
+	}
 
 	const requestDocuments = useCallback(async function () {
 		const response = await fetch('http://localhost:5000/api/get-docs', {
@@ -189,23 +198,28 @@ export default function Dashboard() {
 		// , 5000)
 	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId])
 
-	useEffect(() => {
-		console.log('@');
+	const openSettings = (e) => {
+		setSettingsOpen({ open: true, document: e.detail });
+		setSettingsRenameText(e.detail.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''));
+	}
 
+	// useEffect(() => {
+	// 	console.log(settingFocus);
+	// }, [settingFocus])
+
+	const closeSettings = () => {
+		setSettingFocus(false)
+		console.log('false');
+
+		setSettingsOpen({ open: false, document: settingsOpen.document })
+	}
+
+	useEffect(() => {
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
 
 		(async () => {
 			await requestDocuments()
 		})()
-
-		const openSettings = (e) => {
-			console.log(JSON.stringify(e.detail));
-
-			setSettingsOpen({ open: true, document: e.detail });
-			setSettingsRenameText(e.detail.title);
-
-			console.log(JSON.stringify(settingsOpen))
-		}
 
 		document.addEventListener('on:open-doc-settings', openSettings);
 
@@ -213,10 +227,6 @@ export default function Dashboard() {
 			document.removeEventListener('on:open-doc-settings', openSettings);
 		}
 	}, [requestDocuments])
-
-	useEffect(() => {
-		console.log(settingsOpen);
-	}, [settingsOpen])
 
 	const createDocument = async () => {
 		try {
@@ -308,6 +318,9 @@ export default function Dashboard() {
 
 		if (success) {
 			await requestDocuments()
+			console.log('false');
+
+			setSettingFocus(false)
 			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: data.title } })
 		}
 	}, [renameDocRef, settingsOpen, closeSnackbar, enqueueSnackbar, requestDocuments, user.accountId, user.sessionId])
@@ -324,13 +337,13 @@ export default function Dashboard() {
 			>
 				<div className="Dashboard-top">
 					<div>
-						<Typography variant="h3">{messages.greeting}, {user?.username}</Typography>
+						<Typography variant="h3">{messages.greeting}, {user?.username}!</Typography>
 						<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
 					</div>
 					<div style={{ flexGrow: 1 }}></div>
 					<div className='Dashboard-top-createdocument'>
 						<Tooltip title="Create document">
-							<IconButton onClick={() => setOpenCreateDoc(true)}>
+							<IconButton onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
 								<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
 							</IconButton>
 						</Tooltip>
@@ -338,7 +351,7 @@ export default function Dashboard() {
 				</div>
 				{(!documents.loaded || documents?.list?.length > 0)
 					? <div className="Dashboard-notes">
-						{sanitizeList(!documents.loaded ? Array(Number(l(user?.documentCount))).fill(<Note />) : notesFromDocuments(documents.list, navigate))}
+						{sanitizeList(!documents.loaded ? Array(Number(user?.documentCount)).fill(<Note />) : notesFromDocuments(documents.list, navigate))}
 					</div>
 					: <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
 						You don&apos;t have have any documents yet!
@@ -364,11 +377,16 @@ export default function Dashboard() {
 				</DialogActions>
 			</Dialog>
 
-			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth={true} onClose={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
+			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth={true} onClose={closeSettings}>
 				<div className="Dashboard-Note-Settings-top">
 					<DialogTitle>Your Document</DialogTitle>
 					<div style={{ flexGrow: 1 }}></div>
-					<IconButton sx={{ margin: '1rem' }} onClick={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
+					<IconButton sx={{ margin: '1rem' }} onClick={() => {
+						setSettingFocus(false)
+						console.log('false');
+
+						setSettingsOpen({ open: false, document: settingsOpen.document })
+					}}>
 						<CloseIcon />
 					</IconButton>
 				</div>
@@ -466,6 +484,8 @@ export default function Dashboard() {
 							if (success) await requestDocuments()
 						} finally {
 							setConfirmDelete(false)
+							console.log('false');
+							setSettingFocus(false)
 							setSettingsOpen({ open: false, document: null })
 						}
 					}} color="error">Delete</Button>

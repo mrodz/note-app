@@ -81,7 +81,18 @@ export default function Login() {
 				})
 				document.dispatchEvent(loginEvent)
 
-				navigate('/dashboard', { replace: true })
+				const queryString = window.location.search
+				const urlParams = new URLSearchParams(queryString)
+				console.log(queryString);
+
+				if (urlParams.has('next')) {
+					const next = urlParams.get('next')
+					navigate(next, { replace: true });
+				} else {
+					navigate('/dashboard', { replace: true })
+				}
+
+				// navigate('/dashboard', { replace: true })
 				closeSnackbar()
 			}
 
@@ -114,6 +125,7 @@ export default function Login() {
 				key: 'LOGIN_savedloginsession',
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_savedloginsession') }}>{"×"}</Button>
 			})
+
 			navigate('/dashboard')
 		}
 	}, []);

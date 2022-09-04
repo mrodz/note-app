@@ -189,7 +189,7 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	let count = await (ctx?.prisma ?? prisma).document.findMany({
 		where: {
 			userId: userId,
-			title: title
+			title: title.replace(/^\s+|\s+$|\s(?=\s)/gi, '')
 		}
 	})
 
@@ -201,7 +201,7 @@ export async function createDocument({ sessionId, userId, title }: CreateDocPara
 	const document = await (ctx?.prisma ?? prisma).document.create({
 		data: {
 			content: '',
-			title: title,
+			title: title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''),
 			preview: null,
 			userId: userIdOfSession
 		}
