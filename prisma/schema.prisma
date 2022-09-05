@@ -30,7 +30,7 @@ model Document {
   documentId  String   @unique @default(uuid())
   title       String   @db.VarChar(64)
   preview     String?  @db.VarChar(64)
-  content     String   @db.VarChar(1500)
+  content     String   @db.VarChar(16383)
   createdAt   DateTime @default(now())
   lastUpdated DateTime @default(now())
   userId      String
