@@ -27,12 +27,6 @@ function App() {
 
   // find a more efficient way to do this.
   const user = useContext<LocalStorageSessionInfo>(Context)
-
-  useEffect(() => {
-    console.log("session id change", user?.sessionId);
-
-  }, [user?.sessionId])
-
   const location = useLocation()
 
   return (

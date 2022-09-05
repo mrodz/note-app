@@ -2,8 +2,8 @@ import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divide
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useSnackbar } from "notistack";
 import { useState, useRef, useContext, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router";
-import { Context, readFromLocalStorage } from "../AccountContext";
+import { useNavigate } from "react-router";
+import { Context } from "../AccountContext";
 import { ThrottledCallback } from "../App";
 import { areUsernameAndPasswordValid } from "../Register/Register";
 import { motion } from 'framer-motion';

@@ -177,6 +177,8 @@ export const deleteDocument = catchRecordNotFound(async function ({ sessionId, u
 }, 'Document does not exist for user')
 
 export const writeDocContent = catchRecordNotFound(async function ({ sessionId, userId, documentId, newContent }: WriteDocContentParams, ctx?: Context) {
+	console.log('INCOMING: ', newContent);
+
 	const user = await validateSession(sessionId, userId, ctx)
 
 	if (!await userOwnsDocument(documentId, user.id, ctx)) {

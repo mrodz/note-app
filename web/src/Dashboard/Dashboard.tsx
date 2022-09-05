@@ -134,6 +134,41 @@ const l = function <T>(arg0: T): T { // eslint-disable-line
 	return arg0
 }
 
+export function formatDate(lastUpdated: Date, precise: boolean = false) {
+	const today = new Date();
+
+	/**
+	 * Ensures all numbers are padded with leading zeroes.
+	 * @param n a minute.
+	 * @returns a string of length two to present a given number.
+	 */
+	function fixMinutes(n: number) {
+		if (n > 10) return n
+		return '0' + n
+	}
+
+	function fixHours(n: number) {
+		if (n === 0) return 12
+		return n
+	}
+
+	/**
+	 * Constructs a message to inform the user of the last time their 
+	 * document was updated.
+	 * 
+	 * If this date was today (chronologically), return a timestamp to 
+	 * the minute (HH:mm AM/PM). Otherwise, return the date (MM/DD/YYYY)
+	 */
+	// const lastUpdatedString = (() => {
+	if (lastUpdated.getUTCDate() !== today.getUTCDate())
+		return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
+
+	const hours = fixHours(lastUpdated.getHours())
+	const seconds = precise ? `:${fixMinutes(lastUpdated.getSeconds())}` : ''
+	return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())}${seconds} ${hours < 12 ? "AM" : "PM"}`
+	// })()
+}
+
 /**
  * # Known issues:
  * - The amount of skeleton documents shown during loading
@@ -182,38 +217,7 @@ export default function Dashboard() {
 	 */
 	function notesFromDocuments(documents) {
 		return documents?.map?.(e => {
-			const today = new Date();
-			const lastUpdated = new Date(e.lastUpdated)
-
-			/**
-			 * Ensures all numbers are padded with leading zeroes.
-			 * @param n a minute.
-			 * @returns a string of length two to present a given number.
-			 */
-			function fixMinutes(n: number) {
-				if (n > 10) return n
-				return '0' + n
-			}
-
-			function fixHours(n: number) {
-				if (n === 0) return 12
-				return n
-			}
-
-			/**
-			 * Constructs a message to inform the user of the last time their 
-			 * document was updated.
-			 * 
-			 * If this date was today (chronologically), return a timestamp to 
-			 * the minute (HH:mm AM/PM). Otherwise, return the date (MM/DD/YYYY)
-			 */
-			const lastUpdatedString = (() => {
-				if (lastUpdated.getUTCDate() !== today.getUTCDate())
-					return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
-
-				const hours = fixHours(lastUpdated.getHours())
-				return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
-			})()
+			const lastUpdated = formatDate(new Date(e.lastUpdated))
 
 			/**
 			 * Callback function for a click on a note; navigates to the document with
@@ -242,7 +246,7 @@ export default function Dashboard() {
 							<div>
 								<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
 								<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-									<Typography variant="caption" mr="1rem">Last saved {lastUpdatedString}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+									<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
 								</div>
 							</div>
 							<div style={{ flexGrow: 1 }}></div>
@@ -311,6 +315,7 @@ export default function Dashboard() {
 	// Runs on component mount ONCE. May fire twice during 
 	// development if using <React.StrictMode />
 	useEffect(() => {
+		document.title = 'Dashboard'
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
 		(async () => {
 			await requestDocuments()

@@ -1,14 +1,22 @@
-import { Button, Typography } from "@mui/material"
+import { Button, Divider, IconButton, ListItemIcon, MenuItem, MenuList, Typography } from "@mui/material"
 import { useSnackbar } from "notistack"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
 import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
-import "./Document.scss"
-import useExitPrompt, { useCounter, useTimeout } from "../hooks"
-import { Link } from "react-router-dom"
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import Editor from 'ckeditor5-custom-build/build/ckeditor';
 
-function AccessDenied() {
+import "./Document.scss"
+import useExitPrompt from "../hooks"
+import { Link } from "react-router-dom"
+import { memo } from "react"
+import { formatDate } from "../Dashboard/Dashboard"
+
+const AccessDenied = memo(() => {
+	useEffect(() => {
+		document.title = 'Access Denied'
+	}, [])
 	return (
 		<div className="Document-AccessDenied">
 			<DoNotTouchIcon sx={{ fontSize: '150pt' }} htmlColor="#abb0ac" />
@@ -21,19 +29,20 @@ function AccessDenied() {
 			</Typography>
 		</div>
 	)
-}
+})
 
 export default function UserDocument() {
 	const user = useContext(Context)
 
-	const [documentContent, setDocumentContent] = useState('')
+	const [document, setDocument] = useState<any>({})
 	const [error, setError] = useState<any>({})
 	const [throttlePause, setThrottlePause] = useState(false)
+	const [lastSave, setLastSave] = useState(new Date())
+	const [prevSave, setPrevSave] = useState(null);
 
 	const params = useParams()
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 	const navigate = useNavigate()
-	const [showExitPrompt, setShowExitPrompt] = useExitPrompt(false);
 
 	const documentRef = useRef(null)
 
@@ -67,7 +76,9 @@ export default function UserDocument() {
 			})
 
 			if (success) {
-				setDocumentContent(data.content)
+				setDocument(data)
+				setLastSave(new Date(data.lastUpdated));
+				globalThis.document.title = `Editing '${data.title}'`
 			} else {
 				setError(data)
 			}
@@ -79,7 +90,6 @@ export default function UserDocument() {
 	useEffect(() => {
 		return () => {
 			clearTimeout(timeoutRef.current)
-			setShowExitPrompt(false)
 		}
 	}, [])
 
@@ -100,13 +110,20 @@ export default function UserDocument() {
 	const test = useRef(0);
 
 	const documentChange = useCallback(async () => {
+		if (prevSave === documentRef.current.getData()) {
+			setLastSave(new Date())
+			console.log(`fake save [${prevSave}], [${documentRef.current.getData()}]`);
+
+			return // don't actually save anything if it is a duplicate.
+		}
+
 		const response = await fetch('http://localhost:5000/api/write-doc', {
 			method: 'post',
 			body: JSON.stringify({
 				documentId: params.id,
 				sessionId: user.sessionId,
 				userId: user.accountId,
-				newContent: documentRef.current?.value
+				newContent: documentRef.current.getData()
 			}),
 			headers: { 'Content-Type': 'application/json' }
 		})
@@ -120,6 +137,8 @@ export default function UserDocument() {
 				key: key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
+		} else {
+			setLastSave(new Date())
 		}
 	}, [])
 
@@ -146,12 +165,24 @@ export default function UserDocument() {
 				<>{
 					!('name' in error) ? (
 						<div className="Document">
-
 							<div className="Document-tray">
-								<div>
-									Tray
+								<div className="Document-tray-main">
+									<Typography mb="1rem" variant="h4" className="Document-tray-header">
+										{document?.title} - Saved {formatDate(lastSave, true)}
+									</Typography>
+									<div id="editor"></div>
+									<CKEditor
+										editor={Editor}
+										data={document?.content}
+										onBlur={async () => await documentChange()}
+										onChange={async () => {
+											await documentChangeThrottle()
+										}}
+										onReady={editor => {
+											documentRef.current = editor
+										}}
+									/>
 								</div>
-								<textarea ref={documentRef} className="Document-textarea" placeholder="Empty document" defaultValue={documentContent} onBlur={async () => await documentChange()} onChange={async () => await documentChangeThrottle()} />
 							</div>
 						</div>
 					) : <AccessDenied />

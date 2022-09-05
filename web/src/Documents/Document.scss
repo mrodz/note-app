@@ -1,4 +1,5 @@
 $padding: 2rem;
+$secondary-color: rgb(216, 223, 230);
 
 .Document {
 	// padding: $padding * 3;
@@ -15,12 +16,18 @@ $padding: 2rem;
 	margin-left: $padding * 2;
 	margin-right: $padding * 2;
 	height: 100%;
+	display: flex;
+	flex-direction: row;
 }
 
 .Document-textarea {
 	resize: none;
+	outline: none;
+	border: none;
 	width: 100%;
 	height: 100%;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 130%;
 }
 
 .Document-AccessDenied {
@@ -28,4 +35,24 @@ $padding: 2rem;
 	display: flex;
 	flex-direction: column;
 	place-items: center;
+}
+
+.Document-tray-header {
+	width: 100%;
+	// border-bottom-color: $secondary-color;
+	// border-bottom-style: dotted;
+	// border-bottom-width: .3rem;
+}
+
+.Document-tray-main {
+	flex-grow: 1;
+}
+
+.Document-tray-menu {
+	padding: 1rem;
+	margin-left: .5rem;
+	border-radius: 100vmax;
+	background-color: $secondary-color;
+	display: flex;
+	flex-direction: column;
 }
