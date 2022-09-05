@@ -8,7 +8,7 @@ import fetch from 'node-fetch'
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
-import { CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, renameDocument } from './documentActions'
+import { CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, renameDocument, writeDocContent, WriteDocContentParams } from './documentActions'
 
 const app = express()   // create ExpressJS app
 app.use(express.json()) // allow POST requests to take JSON inputs.
@@ -186,6 +186,18 @@ SERVER: {
 		}
 	})
 
+	app.post('/api/write-doc', async (req: ModelRequest<WriteDocContentParams>, res: ModelResponse) => {
+		const body = req.body;
+		try {
+			let user = await writeDocContent(body);
+
+			res.send(user)
+		} catch (documentError) {
+			console.log(documentError);
+
+			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
+		}
+	})
 	/// END Endpoints
 
 	// Hoist the app

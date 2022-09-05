@@ -11,6 +11,7 @@ import AppHeading from './AppHeading';
 import Dashboard from '../Dashboard/Dashboard';
 import { AnimatePresence } from 'framer-motion'
 import UserDocument from '../Documents/Document';
+import { useEffect } from 'react';
 
 function App() {
   const LoginTheme = createTheme({
@@ -26,6 +27,12 @@ function App() {
 
   // find a more efficient way to do this.
   const user = useContext<LocalStorageSessionInfo>(Context)
+
+  useEffect(() => {
+    console.log("session id change", user?.sessionId);
+
+  }, [user?.sessionId])
+
   const location = useLocation()
 
   return (

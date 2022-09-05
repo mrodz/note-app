@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Document" ALTER COLUMN "preview" SET DATA TYPE VARCHAR(64);

@@ -71,7 +71,7 @@ function getBlurb(): string {
  * @param limit the limit for this operation, defaults to 13
  * @returns the string trimmed to a max of 13 characters
  */
-function trimString(str: string, limit: number = 13): string {
+function trimString(str: string, limit: number = 63): string {
 	if (str.length > limit) {
 		return str.substring(0, limit - 2) + '...'
 	}
@@ -195,6 +195,11 @@ export default function Dashboard() {
 				return '0' + n
 			}
 
+			function fixHours(n: number) {
+				if (n === 0) return 12
+				return n
+			}
+
 			/**
 			 * Constructs a message to inform the user of the last time their 
 			 * document was updated.
@@ -206,7 +211,7 @@ export default function Dashboard() {
 				if (lastUpdated.getUTCDate() !== today.getUTCDate())
 					return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
 
-				const hours = lastUpdated.getHours()
+				const hours = fixHours(lastUpdated.getHours())
 				return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())} ${hours < 12 ? "AM" : "PM"}`
 			})()
 
@@ -248,7 +253,7 @@ export default function Dashboard() {
 							</div>
 						</div>
 						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-						<Typography variant="caption" mr="1rem"> {e.preview === null ? <i>Empty Document</i> : trimString(e.preview)}</Typography>
+						<Typography variant="caption" mr="1rem"> {e.preview === null || /^\s*$/.test(e.preview) ? <i>Empty Document</i> : trimString(e.preview)}</Typography>
 					</div>
 				</ListItem>
 			)

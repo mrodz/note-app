@@ -83,7 +83,6 @@ export default function Login() {
 
 				const queryString = window.location.search
 				const urlParams = new URLSearchParams(queryString)
-				console.log(queryString);
 
 				if (urlParams.has('next')) {
 					const next = urlParams.get('next')

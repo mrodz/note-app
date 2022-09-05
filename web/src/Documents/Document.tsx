@@ -1,10 +1,11 @@
 import { Button, Typography } from "@mui/material"
 import { useSnackbar } from "notistack"
-import { useContext, useEffect, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
 import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
 import "./Document.scss"
+import useExitPrompt, { useCounter, useTimeout } from "../hooks"
 
 function AccessDenied() {
 	return (
@@ -20,11 +21,16 @@ function AccessDenied() {
 export default function UserDocument() {
 	const user = useContext(Context)
 
-	const params = useParams()
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 	const [documentContent, setDocumentContent] = useState('')
 	const [error, setError] = useState<any>({})
+	const [throttlePause, setThrottlePause] = useState(false)
+
+	const params = useParams()
+	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 	const navigate = useNavigate()
+	const [showExitPrompt, setShowExitPrompt] = useExitPrompt(false);
+
+	const documentRef = useRef(null)
 
 	useEffect(() => {
 		if (!user?.sessionId) {
@@ -63,9 +69,63 @@ export default function UserDocument() {
 		})()
 	}, [closeSnackbar, enqueueSnackbar, user?.accountId, user?.sessionId, params?.id])
 
+	const timeoutRef = useRef(null);
+
+	useEffect(() => {
+		return () => {
+			clearTimeout(timeoutRef.current)
+			setShowExitPrompt(false)
+		}
+	}, [])
+
+	useEffect(() => {
+		return () => {
+			if (documentRef.current?.value !== undefined) {
+				documentChange()
+			}
+
+			// clearTimeout(timeoutRef.current)
+		}
+	}, [documentRef.current?.value, timeoutRef.current])
+
 	const l = (a) => {
 		return a
 	}
+
+	const test = useRef(0);
+
+	const documentChange = useCallback(async () => {
+		const response = await fetch('http://localhost:5000/api/write-doc', {
+			method: 'post',
+			body: JSON.stringify({
+				documentId: params.id,
+				sessionId: user.sessionId,
+				userId: user.accountId,
+				newContent: documentRef.current?.value
+			}),
+			headers: { 'Content-Type': 'application/json' }
+		})
+		const success = response.status === 200
+
+
+	}, [])
+
+	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
+		const waiting = throttlePause
+
+		test.current += 1
+
+		setThrottlePause(true)
+		if (waiting) return
+
+		cb()
+
+		timeoutRef.current = setTimeout(() => {
+			if (test.current > 1) cb()
+			test.current = 0
+			setThrottlePause(false)
+		}, 10_000)
+	}, [documentChange, throttlePause])
 
 	return (
 		<>
@@ -78,7 +138,7 @@ export default function UserDocument() {
 								<div>
 									Tray
 								</div>
-								<textarea className="Document-textarea" placeholder="Empty document" defaultValue={documentContent} />
+								<textarea ref={documentRef} className="Document-textarea" placeholder="Empty document" defaultValue={documentContent} onBlur={async () => await documentChange()} onChange={async () => await documentChangeThrottle()} />
 							</div>
 						</div>
 					) : <AccessDenied />

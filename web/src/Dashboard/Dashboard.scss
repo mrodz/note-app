@@ -16,6 +16,8 @@ $padding: 2rem;
 .Dashboard-Note {
 	margin: $padding;
 	width: 100%;
+	height: -webkit-fill-available;
+	height: -moz-available;
 }
 
 .Dashboard-top {
@@ -37,8 +39,26 @@ $padding: 2rem;
 	flex-direction: row;
 }
 
-.Dashboard-Note-clickable 
+.Dashboard-Note-clickable {
+	height: 100%;	
+}
 
-.Dashboard-Note-togglesettings {
+/// MEDIA QUERIES
 
+@media only screen and (max-width: 1400px) {
+	.Dashboard-notes {
+		grid-template-columns: 1fr 1fr 1fr;
+	}
+}
+
+@media only screen and (max-width: 1150px) {
+	.Dashboard-notes {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media only screen and (max-width: 800px) {
+	.Dashboard-notes {
+		grid-template-columns: 1fr;
+	}
 }
