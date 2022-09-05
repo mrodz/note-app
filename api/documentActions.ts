@@ -7,7 +7,7 @@ export function catchRecordNotFound<T extends Function>(callback: T, message: st
 		try {
 			return callback(...args)
 		} catch (exception) {
-			if (exception?.code === 'P2025') { // RecordNotFoundError
+			if (exception?.code === 'P2025' || exception?.name === "NotFoundError") { // RecordNotFoundError
 				throw new CaughtApiException(message)
 			} else {
 				throw exception
@@ -39,7 +39,7 @@ export interface WriteDocContentParams extends DocumentActionAuth, withDocId {
 }
 
 export const validateSession = catchRecordNotFound(async function (sessionId, userId, ctx?: Context) {
-	const userOfSession = await prisma.session.findUnique({
+	const userOfSession = await prisma.session.findFirst({
 		where: {
 			id: sessionId
 		},
@@ -56,13 +56,13 @@ export const validateSession = catchRecordNotFound(async function (sessionId, us
 }, "Invalid session id")
 
 const userOwnsDocument = catchRecordNotFound(async function (documentId, userId, ctx?: Context): Promise<Document | undefined> {
-	const document = await (ctx?.prisma ?? prisma).document.findUniqueOrThrow({
+	const document = await (ctx?.prisma ?? prisma).document.findFirst({
 		where: {
 			documentId: documentId
 		}
 	})
 
-	if (document.userId === userId) return document;
+	if (document?.userId === userId && document !== null) return document;
 
 	return void document;
 }, "Document does not exist for user.")

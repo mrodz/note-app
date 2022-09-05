@@ -6,6 +6,7 @@ import { Context } from "../AccountContext"
 import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
 import "./Document.scss"
 import useExitPrompt, { useCounter, useTimeout } from "../hooks"
+import { Link } from "react-router-dom"
 
 function AccessDenied() {
 	return (
@@ -13,7 +14,11 @@ function AccessDenied() {
 			<DoNotTouchIcon sx={{ fontSize: '150pt' }} htmlColor="#abb0ac" />
 			<Typography variant="h3">Whoops! Nothing to see here.</Typography>
 			<Typography variant="h6">You lack access to this document.</Typography>
-
+			<Typography variant="h6">
+				<Link to="/dashboard" replace>
+					Back to dashboard
+				</Link>
+			</Typography>
 		</div>
 	)
 }
@@ -107,7 +112,15 @@ export default function UserDocument() {
 		})
 		const success = response.status === 200
 
-
+		if (!success) {
+			const key = 'DOCUMENT_' + Math.random()
+			enqueueSnackbar('Could not sync your data', {
+				variant: 'error',
+				persist: true,
+				key: key,
+				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+			})
+		}
 	}, [])
 
 	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {

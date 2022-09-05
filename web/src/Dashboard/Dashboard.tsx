@@ -502,7 +502,7 @@ export default function Dashboard() {
 						fullWidth
 						margin="dense"
 						variant="standard"
-						label="Name"
+						label="Title"
 						inputRef={createDocTitleRef}
 					/>
 				</DialogContent>
