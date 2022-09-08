@@ -7,8 +7,8 @@ import { Context } from './singleton'
  * @param username the username in question
  * @returns a boolean to await
  */
-export async function isUsernameAvailable(username: string): Promise<boolean> {
-	return await prisma.user.count({
+export async function isUsernameAvailable(username: string, ctx?: Context): Promise<boolean> {
+	return await (ctx?.prisma ?? prisma).user.count({
 		where: {
 			username: username
 		}

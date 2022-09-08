@@ -12,6 +12,7 @@ import useExitPrompt from "../hooks"
 import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate } from "../Dashboard/Dashboard"
+import { post } from "../App/App"
 
 const AccessDenied = memo(() => {
 	useEffect(() => {
@@ -53,34 +54,27 @@ export default function UserDocument() {
 		};
 
 		(async () => {
-			const response = await fetch('http://localhost:5000/api/load-doc', {
-				method: 'post',
-				body: JSON.stringify({
-					documentId: params.id,
-					sessionId: user.sessionId,
-					userId: user.accountId,
-				}),
-				headers: { 'Content-Type': 'application/json' }
+			const result = await post.to('/load-doc').send({
+				documentId: params.id,
+				sessionId: user.sessionId,
+				userId: user.accountId,
 			})
-
-			const data = await response.json()
-			const success = response.status === 200
 
 			closeSnackbar()
 			const key = 'DOCUMENT_' + Math.random()
-			enqueueSnackbar(success ? `Editing '${data.title}'` : `Error: ${data.name}`, {
-				variant: success ? 'success' : 'error',
-				persist: !success,
+			enqueueSnackbar(result.ok ? `Editing '${result.json.title}'` : `Error: ${result.json.name}`, {
+				variant: result.ok ? 'success' : 'error',
+				persist: !result.ok,
 				key: key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
 
-			if (success) {
-				setDocument(data)
-				setLastSave(new Date(data.lastUpdated));
-				globalThis.document.title = `Editing '${data.title}'`
+			if (result.ok) {
+				setDocument(result.json)
+				setLastSave(new Date(result.json.lastUpdated));
+				globalThis.document.title = `Editing '${result.json.title}'`
 			} else {
-				setError(data)
+				setError(result.json)
 			}
 		})()
 	}, [closeSnackbar, enqueueSnackbar, user?.accountId, user?.sessionId, params?.id])
@@ -117,19 +111,14 @@ export default function UserDocument() {
 			return // don't actually save anything if it is a duplicate.
 		}
 
-		const response = await fetch('http://localhost:5000/api/write-doc', {
-			method: 'post',
-			body: JSON.stringify({
-				documentId: params.id,
-				sessionId: user.sessionId,
-				userId: user.accountId,
-				newContent: documentRef.current.getData()
-			}),
-			headers: { 'Content-Type': 'application/json' }
-		})
-		const success = response.status === 200
+		const result = await post.to('/write-doc').send({
+			documentId: params.id,
+			sessionId: user.sessionId,
+			userId: user.accountId,
+			newContent: documentRef.current.getData()
+		}, ['ok'])
 
-		if (!success) {
+		if (!result.ok) {
 			const key = 'DOCUMENT_' + Math.random()
 			enqueueSnackbar('Could not sync your data', {
 				variant: 'error',

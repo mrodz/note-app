@@ -111,22 +111,43 @@ export async function loginUser(username: string, password: string, ctx?: Contex
 	if (!passwordMatches)
 		throw new CaughtApiException(messages.passwordError, 'Password is not valid');
 
-	if (user.Session !== null)
-		await logoutUser(user.id)
+	let sessionId: { id: string }
+
+	if (user.Session !== null) { // they are logged in
+		// await logoutUser(user.id)
+
+		sessionId = await (ctx?.prisma ?? prisma).session.update({
+			where: {
+				userId: user.id
+			},
+			data: {
+				activeSessions: {
+					increment: 1
+				}
+			},
+			select: {
+				id: true
+			}
+		})
+	} else {
+		sessionId = await (ctx?.prisma ?? prisma).session.create({
+			data: {
+				userId: user.id,
+			},
+			select: {
+				id: true
+			}
+		})
+	}
+
 	// throw new CaughtApiException('This account is already logged in.')
 
-	const session = await (ctx?.prisma ?? prisma).session.create({
-		data: {
-			userId: user.id,
-		}
-	})
-
-	logger.info(`${username} just logged in -- session id: ${session.id}`)
+	logger.info(`${username} just logged in -- session id: ${sessionId}`)
 
 	return {
 		username: username,
 		accountId: user.id,
-		sessionId: session.id,
+		sessionId: sessionId.id,
 		documentCount: user.documentCount
 	}
 }

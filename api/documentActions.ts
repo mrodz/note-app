@@ -39,7 +39,7 @@ export interface WriteDocContentParams extends DocumentActionAuth, withDocId {
 }
 
 export const validateSession = catchRecordNotFound(async function (sessionId, userId, ctx?: Context) {
-	const userOfSession = await prisma.session.findFirst({
+	const userOfSession = await (ctx?.prisma ?? prisma).session.findFirst({
 		where: {
 			id: sessionId
 		},
@@ -81,9 +81,6 @@ export async function getDocument({ sessionId, userId, documentId }: DocumentAct
 
 export const getDocuments = catchRecordNotFound(async function ({ sessionId, userId }: DocumentActionAuth, ctx?: Context) {
 	const user = await validateSession(sessionId, userId, ctx)
-
-	if (!user)
-		throw new CaughtApiException("Invalid session ID")
 
 	return await (ctx?.prisma ?? prisma).document.findMany({
 		// take: 10,
@@ -211,9 +208,6 @@ export const createDocument = catchRecordNotFound(async function ({ sessionId, u
 		throw new CaughtApiException("Invalid title")
 
 	const user = await validateSession(sessionId, userId, ctx);
-
-	if (!user)
-		throw new CaughtApiException("Invalid session ID")
 
 	let count = await (ctx?.prisma ?? prisma).document.count({
 		where: {

@@ -31,6 +31,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
 import { useNavigate } from 'react-router';
+import { post } from '../App/App';
 
 /**
  * Greets a user according to the time of day.
@@ -271,20 +272,14 @@ export default function Dashboard() {
 	const requestDocuments = useCallback(async function () {
 		// basic post request.
 		/** @todo - timeout and try again. */
-		const response = await fetch('http://localhost:5000/api/get-docs', {
-			method: 'post',
-			body: JSON.stringify({
-				sessionId: user.sessionId,
-				userId: user.accountId
-			}),
-			headers: { 'Content-Type': 'application/json' }
+		const result = await post.to('/get-docs').send({
+			sessionId: user.sessionId,
+			userId: user.accountId
 		})
 
-		const data = await response.json()
-
-		if (response.status !== 200) {
+		if (!result.ok) {
 			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(data?.title ?? 'Error fetching your documents.', {
+			enqueueSnackbar(result.json?.title ?? 'Error fetching your documents.', {
 				variant: 'error',
 				persist: true,
 				key: key,
@@ -293,7 +288,7 @@ export default function Dashboard() {
 			return
 		}
 
-		setDocuments({ loaded: true, list: data })
+		setDocuments({ loaded: true, list: result.json })
 	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId])
 
 	/**
@@ -339,30 +334,23 @@ export default function Dashboard() {
 				return
 			}
 
-			const response = await fetch('http://localhost:5000/api/create-doc', {
-				method: 'post',
-				body: JSON.stringify({
-					title: createDocTitleRef.current.value,
-					sessionId: user.sessionId,
-					userId: user.accountId
-				}),
-				headers: { 'Content-Type': 'application/json' }
+			const result = await post.to('/create-doc').send({
+				title: createDocTitleRef.current.value,
+				sessionId: user.sessionId,
+				userId: user.accountId
 			})
-
-			const data = await response.json()
-			const success = response.status === 200
 
 			closeSnackbar()
 			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(success ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${data.name}`, {
-				variant: success ? 'success' : 'error',
+			enqueueSnackbar(result.ok ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${result.json?.name}`, {
+				variant: result.ok ? 'success' : 'error',
 				persist: false,
 				key: key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
 
 			// if the document was created, re-render the dashboard to include it in the list.
-			if (response.status === 200) await requestDocuments();
+			if (result.ok) await requestDocuments();
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
 		}
@@ -396,34 +384,27 @@ export default function Dashboard() {
 		}
 		/// END checks
 
-		const response = await fetch('http://localhost:5000/api/rename-doc', {
-			method: 'post',
-			body: JSON.stringify({
-				documentId: settingsOpen?.document.documentId,
-				sessionId: user.sessionId,
-				userId: user.accountId,
-				title: renameDocRef.current.value
-			}),
-			headers: { 'Content-Type': 'application/json' }
+		const result = await post.to('/rename-doc').send({
+			documentId: settingsOpen?.document.documentId,
+			sessionId: user.sessionId,
+			userId: user.accountId,
+			title: renameDocRef.current.value
 		})
-
-		const data = await response.json()
-		const success = response.status === 200
 
 		closeSnackbar()
 		const key = 'DASHBOARD_' + Math.random()
-		enqueueSnackbar(success ? `New name: '${data.title}'` : `Error: ${data.name}`, {
-			variant: success ? 'success' : 'error',
-			persist: !success,
+		enqueueSnackbar(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
+			variant: result.ok ? 'success' : 'error',
+			persist: !result.ok,
 			key: key,
 			action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 		})
 
-		if (success) {
+		if (result.ok) {
 			// re-render the dashboard to include the renamed document.
 			await requestDocuments()
 			// close the modal.
-			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: data.title } })
+			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
 		}
 	}, [renameDocRef, settingsOpen, closeSnackbar, enqueueSnackbar, requestDocuments, user.accountId, user.sessionId])
 
@@ -432,29 +413,22 @@ export default function Dashboard() {
 	 */
 	async function deleteDocument() {
 		try {
-			const response = await fetch('http://localhost:5000/api/delete-doc', {
-				method: 'post',
-				body: JSON.stringify({
-					documentId: settingsOpen?.document?.documentId,
-					sessionId: user.sessionId,
-					userId: user.accountId
-				}),
-				headers: { 'Content-Type': 'application/json' }
+			const result = await post.to('/delete-doc').send({
+				documentId: settingsOpen?.document?.documentId,
+				sessionId: user.sessionId,
+				userId: user.accountId
 			})
-
-			const data = await response.json()
-			const success = response.status === 200
 
 			closeSnackbar()
 			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(success ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${data.name}`, {
-				variant: success ? 'success' : 'error',
-				persist: !success,
+			enqueueSnackbar(result.ok ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${result.json.name}`, {
+				variant: result.ok ? 'success' : 'error',
+				persist: !result.ok,
 				key: key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
 			})
 
-			if (success) await requestDocuments()
+			if (result.ok) await requestDocuments()
 		} finally {
 			setConfirmDelete(false) // close confirmation modal
 			setSettingsOpen({ open: false, document: null }) // close settings modal

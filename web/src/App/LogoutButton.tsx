@@ -3,6 +3,7 @@ import { useSnackbar } from 'notistack';
 import { Button } from '@mui/material';
 import { Context } from '../AccountContext';
 import { ThrottledCallback } from '.';
+import { post } from './App';
 
 export default function LogoutButton() {
 	const [loading, setLoading] = React.useState(false);
@@ -18,26 +19,19 @@ export default function LogoutButton() {
 		try {
 			const accountId = user.accountId
 
-			const response = await fetch('http://localhost:5000/api/logout', {
-				method: 'post',
-				body: JSON.stringify({
-					userId: accountId
-				}),
-				headers: { 'Content-Type': 'application/json' }
-			})
-
-			const data = await response.json()
-			const success = response.status === 200
+			const result = await post.to('/logout').send({
+				userId: accountId
+			}, ['ok'])
 
 			document.dispatchEvent(new Event('on:account-logout'))
 
-			if (success) {
+			if (result.ok) {
 				closeSnackbar()
 			}
 
-			enqueueSnackbar(success ? `Logged out from ${user.username}` : data.name, {
-				variant: success ? 'success' : 'error',
-				persist: !success,
+			enqueueSnackbar(result.ok ? `Logged out from ${user.username}` : result.json?.name, {
+				variant: result.ok ? 'success' : 'error',
+				persist: !result.ok,
 				key: 'LOGOUT_BUTTON_' + _key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGOUT_BUTTON_' + _key) }}>{"×"}</Button>
 			})

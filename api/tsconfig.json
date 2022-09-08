@@ -1,6 +1,8 @@
 {
 	"compilerOptions": {
 		"esModuleInterop": true,
-		"strictNullChecks": true
+		"strictNullChecks": true,
+		// "target": "ES5"
 	},
+	
 }

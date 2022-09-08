@@ -21,9 +21,10 @@ model User {
 }
 
 model Session {
-  id     String @unique @default(uuid())
-  userId String @unique
-  User   User   @relation(fields: [userId], references: [id])
+  id             String @unique @default(uuid())
+  userId         String @unique
+  User           User   @relation(fields: [userId], references: [id])
+  activeSessions Int    @default(0)
 }
 
 model Document {

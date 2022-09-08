@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import './Login.scss'
 import { Link } from "react-router-dom";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { post } from "../App/App";
 
 export async function _login(username, password) {
 	if (!areUsernameAndPasswordValid(username, password)) return
@@ -63,21 +64,14 @@ export default function Login() {
 				return
 			}
 
-			const response = await fetch('http://localhost:5000/api/login', {
-				method: 'post',
-				body: JSON.stringify({
-					username: username,
-					password: password
-				}),
-				headers: { 'Content-Type': 'application/json' }
+			const result = await post.to('/login').send({
+				username: username,
+				password: password
 			})
 
-			const data = await response.json()
-			const success = response.status === 200
-
-			if (success) {
+			if (result.ok) {
 				const loginEvent = new CustomEvent('on:account-login', {
-					detail: data
+					detail: result.json
 				})
 				document.dispatchEvent(loginEvent)
 
@@ -95,9 +89,9 @@ export default function Login() {
 				closeSnackbar()
 			}
 
-			enqueueSnackbar(success ? `Welcome, ${data?.username}` : data?.name ?? data?.title, {
-				variant: success ? 'success' : 'error',
-				persist: !success,
+			enqueueSnackbar(result.ok ? `Welcome, ${result.json?.username}` : result.json?.name ?? result.json?.title, {
+				variant: result.ok ? 'success' : 'error',
+				persist: !result.ok,
 				key: 'LOGIN_' + _key,
 				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + _key) }}>{"×"}</Button>
 			})

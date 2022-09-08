@@ -11,7 +11,17 @@ import AppHeading from './AppHeading';
 import Dashboard from '../Dashboard/Dashboard';
 import { AnimatePresence } from 'framer-motion'
 import UserDocument from '../Documents/Document';
-import { useEffect } from 'react';
+import Post from '../postRequest';
+
+export const post = Post.config({
+  baseURL: 'http://localhost:5000/api',
+  interceptor: async (_, data) => {
+    if ('name' in data && data.name === 'Invalid session id') {
+      window.location.href = 'http://localhost:3000/login'
+      document.dispatchEvent(new Event('on:account-logout'))
+    }
+  }
+})
 
 function App() {
   const LoginTheme = createTheme({
