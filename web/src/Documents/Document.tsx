@@ -8,11 +8,11 @@ import { CKEditor } from '@ckeditor/ckeditor5-react';
 import Editor from 'ckeditor5-custom-build/build/ckeditor';
 
 import "./Document.scss"
-import useExitPrompt from "../hooks"
 import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate } from "../Dashboard/Dashboard"
 import { post } from "../App/App"
+import { ArrowBackIosNew } from "@mui/icons-material"
 
 const AccessDenied = memo(() => {
 	useEffect(() => {
@@ -39,7 +39,6 @@ export default function UserDocument() {
 	const [error, setError] = useState<any>({})
 	const [throttlePause, setThrottlePause] = useState(false)
 	const [lastSave, setLastSave] = useState(new Date())
-	const [prevSave, setPrevSave] = useState(null);
 
 	const params = useParams()
 	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
@@ -104,12 +103,13 @@ export default function UserDocument() {
 	const test = useRef(0);
 
 	const documentChange = useCallback(async () => {
-		if (prevSave === documentRef.current.getData()) {
-			setLastSave(new Date())
-			console.log(`fake save [${prevSave}], [${documentRef.current.getData()}]`);
 
-			return // don't actually save anything if it is a duplicate.
-		}
+		// if (prevSave === documentRef.current.getData()) {
+		// 	setLastSave(new Date())
+		// 	console.log(`fake save [${prevSave}], [${documentRef.current.getData()}]`);
+
+		// 	return // don't actually save anything if it is a duplicate.
+		// }
 
 		const result = await post.to('/write-doc').send({
 			documentId: params.id,
@@ -148,6 +148,10 @@ export default function UserDocument() {
 		}, 10_000)
 	}, [documentChange, throttlePause])
 
+	function dashboardClick() {
+		navigate('/dashboard');
+	}
+
 	return (
 		<>
 			{user?.sessionId ? (
@@ -157,7 +161,12 @@ export default function UserDocument() {
 							<div className="Document-tray">
 								<div className="Document-tray-main">
 									<Typography mb="1rem" variant="h4" className="Document-tray-header">
-										{document?.title} - Saved {formatDate(lastSave, true)}
+										<Button variant="outlined" onClick={dashboardClick}>
+											<ArrowBackIosNew sx={{ marginRight: '1rem' }} /> DASHBOARD
+										</Button>
+										<span>Document Saved @ {formatDate(lastSave, true)}</span>
+										<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
+										{document?.title}
 									</Typography>
 									<div id="editor"></div>
 									<CKEditor

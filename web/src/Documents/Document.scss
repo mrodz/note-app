@@ -39,6 +39,11 @@ $secondary-color: rgb(216, 223, 230);
 
 .Document-tray-header {
 	width: 100%;
+
+	& span {
+		margin-left: $padding;
+		font-size: 50%;
+	}
 	// border-bottom-color: $secondary-color;
 	// border-bottom-style: dotted;
 	// border-bottom-width: .3rem;
