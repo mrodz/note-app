@@ -4,14 +4,15 @@ import NotFound from '../NotFound/NotFound';
 import Login from '../Login/Login';
 import Register from '../Register/Register'
 import './App.css';
-import { useContext } from 'react';
-import { createTheme, ThemeProvider } from '@mui/material';
+import { useContext, useEffect } from 'react';
+import { Button, createTheme, ThemeProvider } from '@mui/material';
 import { Context, LocalStorageSessionInfo } from '../AccountContext';
 import AppHeading from './AppHeading';
 import Dashboard from '../Dashboard/Dashboard';
 import { AnimatePresence } from 'framer-motion'
 import UserDocument from '../Documents/Document';
 import Post from '../postRequest';
+import { useSnackbar } from 'notistack';
 
 export const post = Post.config({
   baseURL: 'http://localhost:5000/api',
@@ -23,7 +24,58 @@ export const post = Post.config({
   }
 })
 
+interface Notification {
+  clear?: boolean,
+  persist?: boolean,
+  variant?: 'success' | 'error',
+}
+
+export function pushNotification(message, settings: Notification) {
+  document.dispatchEvent(new CustomEvent('on:snackbar', {
+    detail: {
+      clear: settings?.clear ?? false,
+      message: message,
+      variant: settings?.variant ?? 'success',
+      persist: settings?.persist ?? false
+    }
+  }))
+}
+
+export function clearNotifications() {
+  document.dispatchEvent(new Event('on:snackbar-clear'))
+}
+
 function App() {
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+
+  useEffect(() => {
+    function displaySnackbar(e) {
+      if (e.detail?.clear) {
+        closeSnackbar()
+      }
+
+      const key = 'SNACKBAR_' + Math.random();
+      enqueueSnackbar(e.detail.message, {
+        variant: e.detail.variant,
+        persist: e.detail.persist,
+        key: key,
+        action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+      })
+    }
+
+    function clearNotifications() {
+      closeSnackbar()
+    }
+
+    document.addEventListener('on:snackbar', displaySnackbar)
+    document.addEventListener('on:snackbar-clear', clearNotifications)
+
+    return () => {
+      document.removeEventListener('on:snackbar', displaySnackbar)
+      document.removeEventListener('on:snackbar-clear', clearNotifications)
+    }
+  }, [enqueueSnackbar, closeSnackbar])
+
   const LoginTheme = createTheme({
     palette: {
       primary: {

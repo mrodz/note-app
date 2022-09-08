@@ -1,6 +1,5 @@
-import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider, InputAdornment, IconButton } from "@mui/material";
+import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider, IconButton } from "@mui/material";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import { useSnackbar } from "notistack";
 import { useState, useRef, useContext, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Context } from "../AccountContext";
@@ -10,7 +9,7 @@ import { motion } from 'framer-motion';
 import './Login.scss'
 import { Link } from "react-router-dom";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { post } from "../App/App";
+import { clearNotifications, post, pushNotification } from "../App/App";
 
 export async function _login(username, password) {
 	if (!areUsernameAndPasswordValid(username, password)) return
@@ -45,7 +44,6 @@ export default function Login() {
 
 	let user = useContext(Context);
 
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 	const navigate = useNavigate()
 
 	const sendLoginRequest = async (_key: number, username: string, password: string) => {
@@ -54,11 +52,9 @@ export default function Login() {
 
 		try {
 			if (!areUsernameAndPasswordValid(username, password)) {
-				enqueueSnackbar("Error! Wrong sign-in information.", {
+				pushNotification('Error! Wrong sign-in information.', {
 					variant: 'error',
-					persist: true,
-					key: 'LOGIN_' + _key,
-					action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + _key) }}>{"×"}</Button>
+					persist: true
 				})
 
 				return
@@ -86,14 +82,12 @@ export default function Login() {
 				}
 
 				// navigate('/dashboard', { replace: true })
-				closeSnackbar()
+				clearNotifications()
 			}
 
-			enqueueSnackbar(result.ok ? `Welcome, ${result.json?.username}` : result.json?.name ?? result.json?.title, {
+			pushNotification(result.ok ? `Welcome, ${result.json?.username}` : result.json?.name ?? result.json?.title, {
 				variant: result.ok ? 'success' : 'error',
 				persist: !result.ok,
-				key: 'LOGIN_' + _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_' + _key) }}>{"×"}</Button>
 			})
 		} finally {
 			passwordRef.current.value = ""
@@ -113,15 +107,10 @@ export default function Login() {
 	// because of <React.StrictMode>
 	useEffect(() => {
 		if (user?.sessionId) {
-			enqueueSnackbar(`Saved login session for ${user?.username}`, {
-				variant: 'success',
-				key: 'LOGIN_savedloginsession',
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGIN_savedloginsession') }}>{"×"}</Button>
-			})
-
+			pushNotification(`Saved login session for ${user?.username}`, {})
 			navigate('/dashboard')
 		}
-	}, []);
+	}, [navigate, user?.sessionId, user?.username]);
 
 	return (
 		<>

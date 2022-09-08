@@ -1,5 +1,4 @@
-import { Button, Divider, IconButton, ListItemIcon, MenuItem, MenuList, Typography } from "@mui/material"
-import { useSnackbar } from "notistack"
+import { Button, Divider, Typography } from "@mui/material"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
@@ -11,7 +10,7 @@ import "./Document.scss"
 import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate } from "../Dashboard/Dashboard"
-import { post } from "../App/App"
+import { post, pushNotification } from "../App/App"
 import { ArrowBackIosNew } from "@mui/icons-material"
 
 const AccessDenied = memo(() => {
@@ -41,7 +40,6 @@ export default function UserDocument() {
 	const [lastSave, setLastSave] = useState(new Date())
 
 	const params = useParams()
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 	const navigate = useNavigate()
 
 	const documentRef = useRef(null)
@@ -59,15 +57,6 @@ export default function UserDocument() {
 				userId: user.accountId,
 			})
 
-			closeSnackbar()
-			const key = 'DOCUMENT_' + Math.random()
-			enqueueSnackbar(result.ok ? `Editing '${result.json.title}'` : `Error: ${result.json.name}`, {
-				variant: result.ok ? 'success' : 'error',
-				persist: !result.ok,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-			})
-
 			if (result.ok) {
 				setDocument(result.json)
 				setLastSave(new Date(result.json.lastUpdated));
@@ -76,7 +65,7 @@ export default function UserDocument() {
 				setError(result.json)
 			}
 		})()
-	}, [closeSnackbar, enqueueSnackbar, user?.accountId, user?.sessionId, params?.id])
+	}, [user?.accountId, user?.sessionId, params?.id, navigate])
 
 	const timeoutRef = useRef(null);
 
@@ -86,31 +75,8 @@ export default function UserDocument() {
 		}
 	}, [])
 
-	useEffect(() => {
-		return () => {
-			if (documentRef.current?.value !== undefined) {
-				documentChange()
-			}
-
-			// clearTimeout(timeoutRef.current)
-		}
-	}, [documentRef.current?.value, timeoutRef.current])
-
-	const l = (a) => {
-		return a
-	}
-
-	const test = useRef(0);
 
 	const documentChange = useCallback(async () => {
-
-		// if (prevSave === documentRef.current.getData()) {
-		// 	setLastSave(new Date())
-		// 	console.log(`fake save [${prevSave}], [${documentRef.current.getData()}]`);
-
-		// 	return // don't actually save anything if it is a duplicate.
-		// }
-
 		const result = await post.to('/write-doc').send({
 			documentId: params.id,
 			sessionId: user.sessionId,
@@ -119,17 +85,26 @@ export default function UserDocument() {
 		}, ['ok'])
 
 		if (!result.ok) {
-			const key = 'DOCUMENT_' + Math.random()
-			enqueueSnackbar('Could not sync your data', {
+			pushNotification('Could not sync your data', {
 				variant: 'error',
-				persist: true,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+				persist: true
 			})
 		} else {
 			setLastSave(new Date())
 		}
-	}, [])
+	}, [params.id, user.accountId, user.sessionId])
+
+	useEffect(() => {
+		return () => {
+			if (documentRef.current?.value !== undefined) {
+				documentChange()
+			}
+
+			// clearTimeout(timeoutRef.current)
+		}
+	}, [documentRef.current?.value, documentChange])
+
+	const test = useRef(0);
 
 	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
 		const waiting = throttlePause

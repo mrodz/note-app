@@ -25,13 +25,12 @@ import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { motion } from 'framer-motion'
-import { useSnackbar } from 'notistack';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
 import { useNavigate } from 'react-router';
-import { post } from '../App/App';
+import { post, pushNotification } from '../App/App';
 
 /**
  * Greets a user according to the time of day.
@@ -200,9 +199,6 @@ export default function Dashboard() {
 	// the new document title, stateful value to force repaints on text update.
 	const [settingsRenameText, setSettingsRenameText] = useState('')
 
-	// snackbar hook
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar()
-
 	// react-router-dom hook
 	const navigate = useNavigate()
 
@@ -225,6 +221,12 @@ export default function Dashboard() {
 			 * the specified id. Will always succeed in this context.
 			 */
 			function openDocument() {
+
+				pushNotification(`Opening '${e.title}'`, {
+					variant: 'success',
+					clear: true
+				})
+
 				navigate(`/d/${e.documentId}`)
 			}
 
@@ -278,18 +280,15 @@ export default function Dashboard() {
 		})
 
 		if (!result.ok) {
-			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(result.json?.title ?? 'Error fetching your documents.', {
+			pushNotification(result.json?.title ?? 'Error fetching your documents.', {
 				variant: 'error',
-				persist: true,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+				persist: true
 			})
 			return
 		}
 
 		setDocuments({ loaded: true, list: result.json })
-	}, [closeSnackbar, enqueueSnackbar, user.accountId, user.sessionId])
+	}, [user.accountId, user.sessionId])
 
 	/**
 	 * Open the settings menu and sets the states required to do this.
@@ -323,14 +322,10 @@ export default function Dashboard() {
 	const createDocument = async () => {
 		try {
 			if (!validateTitle(createDocTitleRef.current.value)) {
-				const key = 'DASHBOARD_' + Math.random()
-				enqueueSnackbar('Cannot set this as a title!', {
+				pushNotification('Cannot set this as a title!', {
 					variant: 'error',
-					persist: true,
-					key: key,
-					action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+					persist: true
 				})
-
 				return
 			}
 
@@ -340,17 +335,15 @@ export default function Dashboard() {
 				userId: user.accountId
 			})
 
-			closeSnackbar()
-			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(result.ok ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${result.json?.name}`, {
-				variant: result.ok ? 'success' : 'error',
-				persist: false,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+			pushNotification(result.ok ? `Created doc '${createDocTitleRef.current.value}'` : `Error: ${result.json?.name}`, {
+				clear: true,
+				variant: result.ok ? 'success' : 'error'
 			})
 
 			// if the document was created, re-render the dashboard to include it in the list.
-			if (result.ok) await requestDocuments();
+			if (result.ok) {
+				navigate(`/d/${result.json.documentId}`)
+			};
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
 		}
@@ -362,25 +355,13 @@ export default function Dashboard() {
 	const renameButton = useCallback(async function () {
 		/// START checks - Validate the title before submitting a POST request.
 		if (!validateTitle(renameDocRef.current.value)) {
-			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar('Cannot set this as a title!', {
-				variant: 'error',
-				persist: false,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-			})
-			return;
+			pushNotification('Cannot set this as a title', { variant: 'error' })
+			return
 		}
 
 		if (renameDocRef.current.value === settingsOpen.document?.title) {
-			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar('This is already the title!', {
-				variant: 'error',
-				persist: false,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
-			})
-			return;
+			pushNotification('This is already the title!', { variant: 'error' })
+			return
 		}
 		/// END checks
 
@@ -391,13 +372,10 @@ export default function Dashboard() {
 			title: renameDocRef.current.value
 		})
 
-		closeSnackbar()
-		const key = 'DASHBOARD_' + Math.random()
-		enqueueSnackbar(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
+		pushNotification(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
+			clear: true,
 			variant: result.ok ? 'success' : 'error',
-			persist: !result.ok,
-			key: key,
-			action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+			persist: !result.ok
 		})
 
 		if (result.ok) {
@@ -406,7 +384,7 @@ export default function Dashboard() {
 			// close the modal.
 			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
 		}
-	}, [renameDocRef, settingsOpen, closeSnackbar, enqueueSnackbar, requestDocuments, user.accountId, user.sessionId])
+	}, [renameDocRef, settingsOpen, requestDocuments, user.accountId, user.sessionId])
 
 	/**
 	 * Callback function to delete a document.
@@ -419,13 +397,10 @@ export default function Dashboard() {
 				userId: user.accountId
 			})
 
-			closeSnackbar()
-			const key = 'DASHBOARD_' + Math.random()
-			enqueueSnackbar(result.ok ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${result.json.name}`, {
+			pushNotification(result.ok ? `Deleted '${settingsOpen?.document?.title}'` : `Error: ${result.json.name}`, {
 				variant: result.ok ? 'success' : 'error',
 				persist: !result.ok,
-				key: key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar(key) }}>{"×"}</Button>
+				clear: true
 			})
 
 			if (result.ok) await requestDocuments()

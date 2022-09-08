@@ -1,13 +1,11 @@
 import React, { useContext, useRef } from 'react'
-import { useSnackbar } from 'notistack';
 import { Button } from '@mui/material';
 import { Context } from '../AccountContext';
 import { ThrottledCallback } from '.';
-import { post } from './App';
+import { clearNotifications, post, pushNotification } from './App';
 
 export default function LogoutButton() {
 	const [loading, setLoading] = React.useState(false);
-	const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 	const [count, setCount] = React.useState(1)
 
 	const user = useContext(Context)
@@ -26,14 +24,12 @@ export default function LogoutButton() {
 			document.dispatchEvent(new Event('on:account-logout'))
 
 			if (result.ok) {
-				closeSnackbar()
+				clearNotifications()
 			}
 
-			enqueueSnackbar(result.ok ? `Logged out from ${user.username}` : result.json?.name, {
+			pushNotification(result.ok ? `Logged out from ${user.username}` : result.json?.name, {
 				variant: result.ok ? 'success' : 'error',
 				persist: !result.ok,
-				key: 'LOGOUT_BUTTON_' + _key,
-				action: () => <Button color="secondary" onClick={() => { closeSnackbar('LOGOUT_BUTTON_' + _key) }}>{"×"}</Button>
 			})
 		} finally {
 			setLoading(false)
