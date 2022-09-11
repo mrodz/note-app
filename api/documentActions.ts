@@ -38,6 +38,41 @@ export interface WriteDocContentParams extends DocumentActionAuth, withDocId {
 	newContent: string
 }
 
+export interface ShareDocParams extends DocumentActionAuth, withDocId {
+	guestUserId: string
+}
+
+const PRIVILEGE_LEVELS = {
+	0: 'NONE',
+	1: 'GUEST',
+	2: 'OWNER'
+}
+
+type canAccessDocumentReturns = {
+	accessible: boolean,
+	privilege: keyof typeof PRIVILEGE_LEVELS
+}
+
+export const canAccessDocument = catchRecordNotFound(async function ({ userId, documentId }, ctx?: Context): Promise<canAccessDocumentReturns> {
+	if (await userOwnsDocument(documentId, userId, ctx)) return { accessible: true, privilege: 2 }
+
+	const result = await (ctx?.prisma ?? prisma).user.count({
+		where: {
+			id: userId,
+			guestDocuments: {
+				some: {
+					documentId: documentId
+				}
+			}
+		}
+	}) === 1
+
+	return {
+		accessible: result,
+		privilege: result ? 1 : 0
+	}
+}, "Not found")
+
 export const validateSession = catchRecordNotFound(async function (sessionId, userId, ctx?: Context) {
 	const userOfSession = await (ctx?.prisma ?? prisma).session.findFirst({
 		where: {
@@ -70,13 +105,43 @@ const userOwnsDocument = catchRecordNotFound(async function (documentId, userId,
 export async function getDocument({ sessionId, userId, documentId }: DocumentActionAuth & withDocId, ctx?: Context) {
 	await validateSession(sessionId, userId, ctx)
 
-	const document = await userOwnsDocument(documentId, userId, ctx);
+	const { privilege } = await canAccessDocument({ documentId, userId }, ctx);
 
-	if (document === undefined)
-		throw new CaughtApiException('Access denied', `User ${userId} does not have access to document # ${documentId}`)
+	const canRead = privilege > 0
+	const canWrite = privilege === 2
 
-	const { preview, ...result } = document
-	return result
+	if (privilege === 0) return {
+		privilege: 0
+	}
+
+	const result = await (ctx?.prisma ?? prisma).document.findFirst({
+		where: {
+			documentId: documentId
+		},
+		select: {
+			content: canRead,
+			documentId: true,
+			guests: canRead && {
+				select: {
+					id: true,
+					username: true
+				}
+			},
+			lastUpdated: canRead,
+			title: canRead,
+			User: canRead && {
+				select: {
+					id: true,
+					username: true
+				}
+			}
+		}
+	})
+
+	return {
+		privilege: privilege,
+		...result
+	}
 }
 
 export const getDocuments = catchRecordNotFound(async function ({ sessionId, userId }: DocumentActionAuth, ctx?: Context) {
@@ -142,6 +207,27 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 	return id
 }, "Document does not exist for user")
 
+export const shareDocument = catchRecordNotFound(async function ({ userId, sessionId, documentId, guestUserId }: ShareDocParams, ctx?: Context) {
+	const thisUser = await validateSession(sessionId, userId, ctx)
+	if (!await userOwnsDocument(documentId, userId, ctx)) {
+		throw new CaughtApiException("Access denied")
+	}
+
+	return await (ctx?.prisma ?? prisma).document.update({
+		where: {
+			documentId: documentId
+		},
+		data: {
+			guests: {
+				connect: {
+					id: guestUserId
+				}
+			}
+		}
+	})
+
+}, "Not found")
+
 export const deleteDocument = catchRecordNotFound(async function ({ sessionId, userId, documentId }: DeleteDocParams, ctx?: Context) {
 	const user = await validateSession(sessionId, userId, ctx);
 
@@ -174,7 +260,7 @@ export const deleteDocument = catchRecordNotFound(async function ({ sessionId, u
 }, 'Document does not exist for user')
 
 export const writeDocContent = catchRecordNotFound(async function ({ sessionId, userId, documentId, newContent }: WriteDocContentParams, ctx?: Context) {
-	console.log('INCOMING: ', newContent);
+	// console.log('INCOMING: ', sessionId, userId);
 
 	const user = await validateSession(sessionId, userId, ctx)
 
@@ -188,7 +274,7 @@ export const writeDocContent = catchRecordNotFound(async function ({ sessionId, 
 		},
 		data: {
 			content: newContent,
-			preview: newContent.substring(0, Math.min(newContent.length, 64)),
+			preview: newContent.substring(0, Math.min(newContent.length, 127)),
 			lastUpdated: new Date()
 		},
 		select: {

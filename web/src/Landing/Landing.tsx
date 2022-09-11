@@ -3,6 +3,8 @@ import './Landing.scss';
 
 export default function Landing(): React.ReactElement {
 	return (
-		<div>home</div>
+		<div style={{ marginTop: '5rem' }}>
+			{/* <CKEditor editor={Editor} /> */}
+		</div>
 	)
 }

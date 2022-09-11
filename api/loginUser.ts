@@ -31,7 +31,7 @@ const messages = {
 	passwordError: "Invalid Password",
 }
 
-export async function logoutUser(userId: string, ctx?: Context) {
+export async function logoutUser({ userId }, ctx?: Context) {
 	try {
 		const signedOutSession = await (ctx?.prisma ?? prisma).session.delete({
 			where: {
@@ -82,7 +82,7 @@ function discardPassword(password: string) {
  * @param ctx 
  * @returns 
  */
-export async function loginUser(username: string, password: string, ctx?: Context) {
+export async function loginUser({ username, password }, ctx?: Context) {
 	// Avoid database lookups if the user could not exist in the first place.
 	if (discardUsername(username))
 		throw new CaughtApiException(messages.usernameError, 'Username is not valid')

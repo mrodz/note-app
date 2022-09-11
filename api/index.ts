@@ -8,7 +8,8 @@ import fetch from 'node-fetch'
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
-import { CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, renameDocument, writeDocContent, WriteDocContentParams } from './documentActions'
+import { canAccessDocument, CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, renameDocument, shareDocument, writeDocContent, WriteDocContentParams } from './documentActions'
+import { Context } from './singleton'
 
 const app = express()   // create ExpressJS app
 app.use(express.json()) // allow POST requests to take JSON inputs.
@@ -48,13 +49,18 @@ export interface CaughtApiException {
 	/**
 	 * Exception details/extra info.
 	 */
-	message: string
+	message: string,
+	/**
+	 * HTTP response code.
+	 */
+	code: number
 }
 
 export class CaughtApiException {
-	constructor(title: string, description?: string) {
+	constructor(title: string, description?: string, code?: number) {
 		this.name = title;
 		this.message = description ?? 'None';
+		this.code = code ?? 400
 	}
 }
 /// END CaughtApiException
@@ -75,6 +81,19 @@ export const loop = async (i: number, cb: () => void) => {
 	}
 }
 
+function wrapRestFunction<T = any, R = any>(restFunction: (body: T, ctx?: Context) => Promise<R>) {
+	return async function (req: ModelRequest<T>, res: ModelResponse) {
+		const body = req.body;
+		try {
+			let methodResponse = await restFunction(body)
+			res.send(methodResponse)
+		} catch (error) {
+			logger.error(error)
+			res.status(error?.code ?? 500).send(error)
+		}
+	}
+}
+
 SERVER: {
 	// do not submit logs or host the server when testing
 	if (process.env.NODE_ENV === 'test') break SERVER
@@ -83,121 +102,17 @@ SERVER: {
 	logger.add(new winston.transports.File({ filename: './logs/error.log' }))
 
 	/// BEGIN Endpoints
-	app.post('/api/register', async (req: ModelRequest<RegisterParams>, res: ModelResponse) => {
-		const body = req.body;
-		// console.log(req)
-		try {
-			let user = await createUser(body);
-			logger.info(`Created new user: ${user.username} (# ${user.id})`)
-			res.send(user)
-		} catch (usernameError) {
-			console.log(usernameError);
-
-			res.status(usernameError instanceof CaughtApiException ? 400 : 500).send(usernameError)
-		}
-	})
-
-	app.post('/api/logout', async (req: ModelRequest<LogoutParams>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await logoutUser(body.userId);
-			res.send(user)
-		} catch (usernameError) {
-			// console.log(usernameError);
-			res.status(usernameError instanceof CaughtApiException ? 400 : 500).send(usernameError)
-		}
-	})
-
-	app.post('/api/login', async (req: ModelRequest<LoginParams>, res: ModelResponse) => {
-		const body = req.body;
-
-		try {
-			let user = await loginUser(body.username, body.password);
-			res.json(user)
-			// console.log(user);
-		} catch (loginError) {
-			// console.error(loginError)
-			res.status(loginError instanceof CaughtApiException ? 400 : 500).send(loginError)
-		}
-	})
-
-	app.post('/api/get-docs', async (req: ModelRequest, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await getDocuments(body);
-
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
-
-	app.post('/api/create-doc', async (req: ModelRequest<CreateDocParams>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await createDocument(body);
-			// console.log(user);
-
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
-
-	app.post('/api/rename-doc', async (req: ModelRequest<CreateDocParams & DeleteDocParams>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await renameDocument(body);
-
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
-
-	app.post('/api/load-doc', async (req: ModelRequest<DocumentActionAuth & { documentId: string }>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await getDocument(body);
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
-
-	app.post('/api/delete-doc', async (req: ModelRequest<DeleteDocParams>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await deleteDocument(body);
-
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
-
-	app.post('/api/write-doc', async (req: ModelRequest<WriteDocContentParams>, res: ModelResponse) => {
-		const body = req.body;
-		try {
-			let user = await writeDocContent(body);
-
-			res.send(user)
-		} catch (documentError) {
-			console.log(documentError);
-
-			res.status(documentError instanceof CaughtApiException ? 400 : 500).send(documentError)
-		}
-	})
+	app.post('/api/register', wrapRestFunction(createUser))
+	app.post('/api/logout', wrapRestFunction(logoutUser))
+	app.post('/api/login', wrapRestFunction(loginUser))
+	app.post('/api/get-docs', wrapRestFunction(getDocuments))
+	app.post('/api/create-doc', wrapRestFunction(createDocument))
+	app.post('/api/rename-doc', wrapRestFunction(renameDocument))
+	app.post('/api/load-doc', wrapRestFunction(getDocument))
+	app.post('/api/delete-doc', wrapRestFunction(deleteDocument))
+	app.post('/api/write-doc', wrapRestFunction(writeDocContent))
+	app.post('/api/share-doc', wrapRestFunction(shareDocument))
+	app.post('/api/access-doc', wrapRestFunction(canAccessDocument))
 	/// END Endpoints
 
 	// Hoist the app

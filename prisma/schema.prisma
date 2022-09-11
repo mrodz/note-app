@@ -9,13 +9,15 @@ datasource db {
 }
 
 model User {
-  id            String     @unique @default(uuid())
-  username      String     @unique
-  password      String
-  createdAt     DateTime   @default(now())
-  documents     Document[]
-  documentCount Int        @default(0)
-  Session       Session?
+  id                 String     @id @unique @default(uuid())
+  username           String     @unique
+  password           String
+  createdAt          DateTime   @default(now())
+  documents          Document[] @relation("owner")
+  guestDocuments     Document[] @relation("guest")
+  documentCount      Int        @default(0)
+  Session            Session?
+  documentDocumentId String?
 
   @@index([username])
 }
@@ -28,12 +30,13 @@ model Session {
 }
 
 model Document {
-  documentId  String   @unique @default(uuid())
+  documentId  String   @id @unique @default(uuid())
   title       String   @db.VarChar(64)
-  preview     String?  @db.VarChar(64)
+  preview     String?  @db.VarChar(127)
   content     String   @db.VarChar(16383)
   createdAt   DateTime @default(now())
   lastUpdated DateTime @default(now())
   userId      String
-  User        User     @relation(fields: [userId], references: [id])
+  User        User     @relation("owner", fields: [userId], references: [id])
+  guests      User[]   @relation("guest")
 }

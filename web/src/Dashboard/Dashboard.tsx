@@ -24,13 +24,14 @@ import {
 import AlarmOnIcon from '@mui/icons-material/AlarmOn';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { TransitionProps } from '@mui/material/transitions';
 import { useNavigate } from 'react-router';
 import { post, pushNotification } from '../App/App';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Greets a user according to the time of day.
@@ -61,7 +62,7 @@ const blurbs = {
  * @returns a blurb
  */
 function getBlurb(): string {
-	const n = Math.floor(Math.random() * 5);
+	const n = Math.floor(Math.random() * 10);
 	return blurbs[n];
 }
 
@@ -71,7 +72,7 @@ function getBlurb(): string {
  * @param limit the limit for this operation, defaults to 13
  * @returns the string trimmed to a max of 13 characters
  */
-function trimString(str: string, limit: number = 63): string {
+function trimString(str: string, limit: number = 127): string {
 	if (str.length > limit) {
 		return str.substring(0, limit - 2) + '...'
 	}
@@ -260,7 +261,15 @@ export default function Dashboard() {
 							</div>
 						</div>
 						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-						<Typography variant="caption" mr="1rem"> {e.preview === null || /^\s*$/.test(e.preview) ? <i>Empty Document</i> : trimString(e.preview)}</Typography>
+						<Typography variant="caption" mr="1rem">
+							<span dangerouslySetInnerHTML={{
+								__html: e.preview === null || /^\s*$/.test(e.preview)
+									? "<i>Empty Document</i>"
+									: trimString(sanitizeHtml(e.preview, {
+										allowedTags: ['b', 'i', 'strong', 'u', 'br'],
+									}))
+							}}></span>
+						</Typography>
 					</div>
 				</ListItem>
 			)
@@ -411,7 +420,7 @@ export default function Dashboard() {
 	}
 
 	return (
-		<>
+		<AnimatePresence>
 			<motion.div
 				className='Dashboard'
 				initial={{ width: 0 }}
@@ -542,6 +551,6 @@ export default function Dashboard() {
 					<Button variant="contained" onClick={() => setConfirmDelete(false)}>Cancel</Button>
 				</DialogActions>
 			</Dialog>
-		</>
+		</AnimatePresence>
 	)
 }

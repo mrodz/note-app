@@ -2,9 +2,9 @@ import { Button, Divider, Typography } from "@mui/material"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
-import DoNotTouchIcon from '@mui/icons-material/DoNotTouch';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
-import Editor from 'ckeditor5-custom-build/build/ckeditor';
+import DoNotTouchIcon from '@mui/icons-material/DoNotTouch'
+import { CKEditor } from '@ckeditor/ckeditor5-react'
+import Editor from 'ckeditor5-custom-build/build/ckeditor'
 
 import "./Document.scss"
 import { Link } from "react-router-dom"
@@ -12,6 +12,7 @@ import { memo } from "react"
 import { formatDate } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
 import { ArrowBackIosNew } from "@mui/icons-material"
+import { AnimatePresence, motion } from "framer-motion"
 
 const AccessDenied = memo(() => {
 	useEffect(() => {
@@ -44,6 +45,13 @@ export default function UserDocument() {
 
 	const documentRef = useRef(null)
 
+	const requirePrivilege = (privilegeLevel: number, cb: (...args: any[]) => any, not?: (...args: any) => any) => {
+		if (document?.privilege >= privilegeLevel) return cb
+		return not ?? (() => { })
+	}
+
+	const getActionVerb = requirePrivilege(2, () => "Editing", () => "Viewing")
+
 	useEffect(() => {
 		if (!user?.sessionId) {
 			navigate(`/login?next=/d/${params.id}`)
@@ -60,7 +68,7 @@ export default function UserDocument() {
 			if (result.ok) {
 				setDocument(result.json)
 				setLastSave(new Date(result.json.lastUpdated));
-				globalThis.document.title = `Editing '${result.json.title}'`
+				globalThis.document.title = `${getActionVerb()} '${result.json.title}'`
 			} else {
 				setError(result.json)
 			}
@@ -75,8 +83,7 @@ export default function UserDocument() {
 		}
 	}, [])
 
-
-	const documentChange = useCallback(async () => {
+	const documentChange = requirePrivilege(2, useCallback(async () => {
 		const result = await post.to('/write-doc').send({
 			documentId: params.id,
 			sessionId: user.sessionId,
@@ -92,7 +99,7 @@ export default function UserDocument() {
 		} else {
 			setLastSave(new Date())
 		}
-	}, [params.id, user.accountId, user.sessionId])
+	}, [params.id, user?.accountId, user?.sessionId]))
 
 	useEffect(() => {
 		return () => {
@@ -106,7 +113,7 @@ export default function UserDocument() {
 
 	const test = useRef(0);
 
-	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
+	const documentChangeThrottle = requirePrivilege(2, useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
 		const waiting = throttlePause
 
 		test.current += 1
@@ -121,7 +128,7 @@ export default function UserDocument() {
 			test.current = 0
 			setThrottlePause(false)
 		}, 10_000)
-	}, [documentChange, throttlePause])
+	}, [documentChange, throttlePause]))
 
 	function dashboardClick() {
 		navigate('/dashboard');
@@ -134,19 +141,25 @@ export default function UserDocument() {
 					!('name' in error) ? (
 						<div className="Document">
 							<div className="Document-tray">
-								<div className="Document-tray-main">
+								<motion.div
+									className="Document-tray-main"
+									initial={{ width: 0 }}
+									animate={{ width: 'inherit' }}
+									exit={{ x: window.innerWidth }}
+								>
 									<Typography mb="1rem" variant="h4" className="Document-tray-header">
 										<Button variant="outlined" onClick={dashboardClick}>
 											<ArrowBackIosNew sx={{ marginRight: '1rem' }} /> DASHBOARD
 										</Button>
 										<span>Document Saved @ {formatDate(lastSave, true)}</span>
 										<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
-										{document?.title}
+										{document?.title} - {JSON.stringify(document?.guests)}
 									</Typography>
 									<div id="editor"></div>
 									<CKEditor
 										editor={Editor}
 										data={document?.content}
+										disabled={document?.privilege !== 2}
 										onBlur={async () => await documentChange()}
 										onChange={async () => {
 											await documentChangeThrottle()
@@ -155,11 +168,11 @@ export default function UserDocument() {
 											documentRef.current = editor
 										}}
 									/>
-								</div>
+								</motion.div>
 							</div>
 						</div>
 					) : <AccessDenied />
-				}</>
+				} </>
 			) : "Please sign in."}
 		</>
 	)

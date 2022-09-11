@@ -63,3 +63,7 @@ export function AccountContext(props: { children: any }) {
 		</Context.Provider >
 	)
 }
+
+export const sessionId = () => localStorage['session-id']
+export const userId = () => localStorage['account-id']
+export const username = () => localStorage['username'] 
