@@ -1,3 +1,5 @@
+@use "sass:math";
+
 $padding: 2rem;
 $secondary-color: rgb(216, 223, 230);
 
@@ -64,4 +66,8 @@ $secondary-color: rgb(216, 223, 230);
 
 .ck.ck-editor {
 	margin-bottom: $padding;
+}
+
+button.ShareButton {
+	margin-left: math.div($padding, 2);
 }

@@ -105,14 +105,14 @@ SERVER: {
 	app.post('/api/register', wrapRestFunction(createUser))
 	app.post('/api/logout', wrapRestFunction(logoutUser))
 	app.post('/api/login', wrapRestFunction(loginUser))
-	app.post('/api/get-docs', wrapRestFunction(getDocuments))
-	app.post('/api/create-doc', wrapRestFunction(createDocument))
-	app.post('/api/rename-doc', wrapRestFunction(renameDocument))
-	app.post('/api/load-doc', wrapRestFunction(getDocument))
-	app.post('/api/delete-doc', wrapRestFunction(deleteDocument))
-	app.post('/api/write-doc', wrapRestFunction(writeDocContent))
-	app.post('/api/share-doc', wrapRestFunction(shareDocument))
-	app.post('/api/access-doc', wrapRestFunction(canAccessDocument))
+	app.post('/api/doc/all', wrapRestFunction(getDocuments))
+	app.post('/api/doc/create', wrapRestFunction(createDocument))
+	app.post('/api/doc/rename', wrapRestFunction(renameDocument))
+	app.post('/api/doc/get', wrapRestFunction(getDocument))
+	app.post('/api/doc/delete', wrapRestFunction(deleteDocument))
+	app.post('/api/doc/write', wrapRestFunction(writeDocContent))
+	app.post('/api/doc/share', wrapRestFunction(shareDocument))
+	app.post('/api/doc/access', wrapRestFunction(canAccessDocument))
 	/// END Endpoints
 
 	// Hoist the app

@@ -1,4 +1,5 @@
 import { CaughtApiException, prisma } from "."
+import { isValidUsernameChars, isValidUsernameLength } from "./createUser"
 import { Document } from "./generated/client"
 import { Context } from "./singleton"
 
@@ -7,6 +8,8 @@ export function catchRecordNotFound<T extends Function>(callback: T, message: st
 		try {
 			return callback(...args)
 		} catch (exception) {
+			console.log('@', exception?.name);
+
 			if (exception?.code === 'P2025' || exception?.name === "NotFoundError") { // RecordNotFoundError
 				throw new CaughtApiException(message)
 			} else {
@@ -39,10 +42,10 @@ export interface WriteDocContentParams extends DocumentActionAuth, withDocId {
 }
 
 export interface ShareDocParams extends DocumentActionAuth, withDocId {
-	guestUserId: string
+	guestUsername: string
 }
 
-const PRIVILEGE_LEVELS = {
+const PRIVILEGE_LEVELS: { [level: number]: string } = {
 	0: 'NONE',
 	1: 'GUEST',
 	2: 'OWNER'
@@ -61,7 +64,7 @@ export const canAccessDocument = catchRecordNotFound(async function ({ userId, d
 			id: userId,
 			guestDocuments: {
 				some: {
-					documentId: documentId
+					id: documentId
 				}
 			}
 		}
@@ -93,7 +96,7 @@ export const validateSession = catchRecordNotFound(async function (sessionId, us
 const userOwnsDocument = catchRecordNotFound(async function (documentId, userId, ctx?: Context): Promise<Document | undefined> {
 	const document = await (ctx?.prisma ?? prisma).document.findFirst({
 		where: {
-			documentId: documentId
+			id: documentId
 		}
 	})
 
@@ -102,7 +105,7 @@ const userOwnsDocument = catchRecordNotFound(async function (documentId, userId,
 	return void document
 }, "Document does not exist for user.")
 
-export async function getDocument({ sessionId, userId, documentId }: DocumentActionAuth & withDocId, ctx?: Context) {
+export const getDocument = catchRecordNotFound(async function ({ sessionId, userId, documentId }: DocumentActionAuth & withDocId, ctx?: Context) {
 	await validateSession(sessionId, userId, ctx)
 
 	const { privilege } = await canAccessDocument({ documentId, userId }, ctx)
@@ -116,11 +119,11 @@ export async function getDocument({ sessionId, userId, documentId }: DocumentAct
 
 	const result = await (ctx?.prisma ?? prisma).document.findFirst({
 		where: {
-			documentId: documentId
+			id: documentId
 		},
 		select: {
 			content: canRead,
-			documentId: true,
+			id: true,
 			guests: canRead && {
 				select: {
 					id: true,
@@ -142,7 +145,7 @@ export async function getDocument({ sessionId, userId, documentId }: DocumentAct
 		privilege: privilege,
 		...result
 	}
-}
+}, "Not Found")
 
 export const getDocuments = catchRecordNotFound(async function ({ sessionId, userId }: DocumentActionAuth, ctx?: Context) {
 	const user = await validateSession(sessionId, userId, ctx)
@@ -153,7 +156,7 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 			userId: user.id
 		},
 		select: {
-			documentId: true,
+			id: true,
 			title: true,
 			lastUpdated: true,
 			createdAt: true,
@@ -192,14 +195,14 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 
 	const id = await (ctx?.prisma ?? prisma).document.update({
 		where: {
-			documentId: documentId
+			id: documentId
 		},
 		data: {
 			title: title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''),
 			lastUpdated: new Date()
 		},
 		select: {
-			documentId: true,
+			id: true,
 			title: true
 		}
 	})
@@ -207,24 +210,52 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 	return id
 }, "Document does not exist for user")
 
-export const shareDocument = catchRecordNotFound(async function ({ userId, sessionId, documentId, guestUserId }: ShareDocParams, ctx?: Context) {
-	const thisUser = await validateSession(sessionId, userId, ctx)
-	if (!await userOwnsDocument(documentId, userId, ctx)) {
-		throw new CaughtApiException("Access denied")
-	}
+export const shareDocument = catchRecordNotFound(async function ({ userId, sessionId, documentId, guestUsername }: ShareDocParams, ctx?: Context) {
 
-	return await (ctx?.prisma ?? prisma).document.update({
+	const thisUser = await validateSession(sessionId, userId, ctx)
+
+	if (!await userOwnsDocument(documentId, thisUser.id, ctx))
+		throw new CaughtApiException("Access denied")
+
+	if (!isValidUsernameLength(guestUsername) || !isValidUsernameChars(guestUsername))
+		throw new CaughtApiException("Illegal username")
+
+	const idFromGuestUsername = await (ctx?.prisma ?? prisma).user.findFirst({
 		where: {
-			documentId: documentId
+			username: guestUsername
+		},
+		select: {
+			id: true
+		}
+	})
+
+	if (idFromGuestUsername === null)
+		throw new CaughtApiException(`Account '${guestUsername}' does not exist`)
+
+	// try {
+	await (ctx?.prisma ?? prisma).document.update({
+		where: {
+			id: documentId
 		},
 		data: {
 			guests: {
 				connect: {
-					id: guestUserId
+					id: idFromGuestUsername.id
 				}
 			}
+		},
+		select: {
+			_count: true
 		}
 	})
+
+	return {
+		username: guestUsername,
+		id: idFromGuestUsername
+	}
+	// } catch (e) {
+	// 	console.log(e)
+	// }
 
 }, "Not found")
 
@@ -237,11 +268,11 @@ export const deleteDocument = catchRecordNotFound(async function ({ sessionId, u
 
 	const deletedDocument = await (ctx?.prisma ?? prisma).document.delete({
 		where: {
-			documentId: documentId
+			id: documentId
 		},
 		select: {
 			title: true,
-			documentId: true
+			id: true
 		}
 	})
 
@@ -268,7 +299,7 @@ export const writeDocContent = catchRecordNotFound(async function ({ sessionId, 
 
 	const id = await (ctx?.prisma ?? prisma).document.update({
 		where: {
-			documentId: documentId
+			id: documentId
 		},
 		data: {
 			content: newContent,
@@ -276,7 +307,7 @@ export const writeDocContent = catchRecordNotFound(async function ({ sessionId, 
 			lastUpdated: new Date()
 		},
 		select: {
-			documentId: true
+			id: true
 		}
 	})
 
@@ -325,5 +356,5 @@ export const createDocument = catchRecordNotFound(async function ({ sessionId, u
 		}
 	})
 
-	return { documentId: document.documentId }
+	return { documentId: document.id }
 }, 'Invalid user id')

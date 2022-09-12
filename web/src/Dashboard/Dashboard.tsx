@@ -116,7 +116,7 @@ function documentsToCards(list: any[]) {
 /**
  * Slide-up transition, used in the create document menu.
  */
-const Transition = forwardRef(function Transition(
+export const Transition = forwardRef(function Transition(
 	props: TransitionProps & {
 		children: ReactElement<any, any>
 	},
@@ -228,7 +228,7 @@ export default function Dashboard() {
 					clear: true
 				})
 
-				navigate(`/d/${e.documentId}`)
+				navigate(`/d/${e.id}`)
 			}
 
 			/**
@@ -290,7 +290,7 @@ export default function Dashboard() {
 	const requestDocuments = useCallback(async function () {
 		// basic post request.
 		/** @todo - timeout and try again. */
-		const result = await post.to('/get-docs').send({
+		const result = await post.to('/doc/all').send({
 			sessionId: user.sessionId,
 			userId: user.accountId
 		})
@@ -346,7 +346,7 @@ export default function Dashboard() {
 				return
 			}
 
-			const result = await post.to('/create-doc').send({
+			const result = await post.to('/doc/create').send({
 				title: createDocTitleRef.current.value,
 				sessionId: user.sessionId,
 				userId: user.accountId
@@ -359,7 +359,7 @@ export default function Dashboard() {
 
 			// if the document was created, re-render the dashboard to include it in the list.
 			if (result.ok) {
-				navigate(`/d/${result.json.documentId}`)
+				navigate(`/d/${result.json.id}`)
 			}
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
@@ -383,8 +383,8 @@ export default function Dashboard() {
 		}
 		/// END checks
 
-		const result = await post.to('/rename-doc').send({
-			documentId: settingsOpen?.document.documentId,
+		const result = await post.to('/doc/rename').send({
+			documentId: settingsOpen?.document.id,
 			sessionId: user.sessionId,
 			userId: user.accountId,
 			title: renameDocRef.current.value
@@ -409,8 +409,8 @@ export default function Dashboard() {
 	 */
 	async function deleteDocument() {
 		try {
-			const result = await post.to('/delete-doc').send({
-				documentId: settingsOpen?.document?.documentId,
+			const result = await post.to('/doc/delete').send({
+				documentId: settingsOpen?.document?.id,
 				sessionId: user.sessionId,
 				userId: user.accountId
 			})
@@ -487,7 +487,7 @@ export default function Dashboard() {
 				</DialogActions>
 			</Dialog>
 
-			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth={true} onClose={closeSettings}>
+			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth onClose={closeSettings}>
 				<div className="Dashboard-Note-Settings-top">
 					<DialogTitle>Your Document</DialogTitle>
 					<div style={{ flexGrow: 1 }}></div>
@@ -517,7 +517,7 @@ export default function Dashboard() {
 
 					<ListItem>
 						<ListItemText>
-							Unique Id: {settingsOpen.document?.documentId}
+							Unique Id: {settingsOpen.document?.id}
 						</ListItemText>
 					</ListItem>
 

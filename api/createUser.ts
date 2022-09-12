@@ -23,7 +23,7 @@ export async function isUsernameAvailable(username: string, ctx?: Context): Prom
  * @returns if the username is valid
  */
 export function isValidUsernameLength(username: string): boolean {
-	return username.length > 2 && username.length <= 16
+	return username?.length > 2 && username?.length <= 16
 }
 
 /**

@@ -1,4 +1,4 @@
-import { Button, Divider, Typography } from "@mui/material"
+import { Button, Dialog, DialogActions, DialogContentText, DialogTitle, Divider, TextField, Typography } from "@mui/material"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
@@ -9,10 +9,12 @@ import Editor from 'ckeditor5-custom-build/build/ckeditor'
 import "./Document.scss"
 import { Link } from "react-router-dom"
 import { memo } from "react"
-import { formatDate } from "../Dashboard/Dashboard"
+import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
-import { ArrowBackIosNew } from "@mui/icons-material"
+import { ArrowBackIosNew, Share } from "@mui/icons-material"
 import { AnimatePresence, motion } from "framer-motion"
+import ShareButton from "./ShareButton"
+import { isUsernameValid } from "../Register/Register"
 
 const AccessDenied = memo(() => {
 	useEffect(() => {
@@ -39,6 +41,8 @@ export default function UserDocument() {
 	const [error, setError] = useState<any>({})
 	const [throttlePause, setThrottlePause] = useState(false)
 	const [lastSave, setLastSave] = useState(new Date())
+	const [shareModalOpen, setShareModalOpen] = useState(false)
+
 
 	const params = useParams()
 	const navigate = useNavigate()
@@ -52,6 +56,14 @@ export default function UserDocument() {
 
 	const getActionVerb = requirePrivilege(2, () => "Editing", () => "Viewing")
 
+	const loadDoc = async () => {
+		return await post.to('/doc/get').send({
+			documentId: params.id,
+			sessionId: user.sessionId,
+			userId: user.accountId,
+		})
+	}
+
 	useEffect(() => {
 		if (!user?.sessionId) {
 			navigate(`/login?next=/d/${params.id}`)
@@ -59,11 +71,7 @@ export default function UserDocument() {
 		}
 
 		(async () => {
-			const result = await post.to('/load-doc').send({
-				documentId: params.id,
-				sessionId: user.sessionId,
-				userId: user.accountId,
-			})
+			const result = await loadDoc()
 
 			if (result.ok) {
 				setDocument(result.json)
@@ -84,7 +92,7 @@ export default function UserDocument() {
 	}, [])
 
 	const documentChange = requirePrivilege(2, useCallback(async () => {
-		const result = await post.to('/write-doc').send({
+		const result = await post.to('/doc/write').send({
 			documentId: params.id,
 			sessionId: user.sessionId,
 			userId: user.accountId,
@@ -134,6 +142,68 @@ export default function UserDocument() {
 		navigate('/dashboard')
 	}
 
+	function ShareButton() {
+		const [canSend, setCanSend] = useState(null)
+
+		const shareRef = useRef(null)
+
+		const openModal = () => setShareModalOpen(true)
+		const closeModal = () => setShareModalOpen(false)
+
+		useEffect(() => {
+			console.log(shareRef.current?.value)
+		}, [shareRef.current?.value])
+
+		const shareDocument = async () => {
+			const response = await post.to('/doc/share').send({
+				userId: user.accountId,
+				documentId: params.id,
+				sessionId: user.sessionId,
+				guestUsername: shareRef.current.value
+			})
+
+			if (response.ok) {
+				setDocument({ ...document, guests: document.guests.concat(response.json) })
+				setShareModalOpen(false)
+			}
+		}
+
+		return (
+			<>
+				<Button variant="contained" className="ShareButton" onClick={openModal}>
+					<Share sx={{ marginRight: '1rem' }} />
+					Share
+				</Button>
+
+				<Dialog TransitionComponent={Transition} maxWidth="xs" fullWidth open={shareModalOpen} onClose={closeModal}>
+					<DialogTitle>Share Document</DialogTitle>
+					<DialogContentText sx={{ margin: '1rem' }}>
+						The account associated with this username will be able to see this document&apos;s content.
+					</DialogContentText>
+					<TextField
+						inputRef={shareRef}
+						sx={{ margin: '1rem' }}
+						label="Guest's Username"
+						variant="standard"
+						error={!canSend && !!shareRef.current?.value} // Not a bug (a feature for now?)
+						{...!canSend && !!shareRef.current?.value ? { helperText: 'woo' } : {}}
+						onChange={() => {
+							if (isUsernameValid(shareRef.current.value)) {
+								if (!canSend) setCanSend(true)
+							} else if (canSend) {
+								setCanSend(false)
+							}
+						}}
+					/>
+					<DialogActions>
+						<Button onClick={closeModal}>Cancel</Button>
+						<Button onClick={shareDocument} variant="contained" disabled={!canSend}>Share</Button>
+					</DialogActions>
+				</Dialog>
+			</>
+		)
+	}
+
 	return (
 		<>
 			{user?.sessionId ? (
@@ -151,6 +221,7 @@ export default function UserDocument() {
 										<Button variant="outlined" onClick={dashboardClick}>
 											<ArrowBackIosNew sx={{ marginRight: '1rem' }} /> DASHBOARD
 										</Button>
+										<ShareButton />
 										<span>Document Saved @ {formatDate(lastSave, true)}</span>
 										<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
 										{document?.title} - {JSON.stringify(document?.guests)}

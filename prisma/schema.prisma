@@ -22,14 +22,14 @@ model User {
 }
 
 model Session {
-  id             String @unique @default(uuid())
+  id             String @id @unique @default(uuid())
   userId         String @unique
   User           User   @relation(fields: [userId], references: [id])
   activeSessions Int    @default(0)
 }
 
 model Document {
-  documentId  String   @id @unique @default(uuid())
+  id          String   @id @unique @default(uuid())
   title       String   @db.VarChar(64)
   preview     String?  @db.VarChar(127)
   content     String   @db.VarChar(16383)

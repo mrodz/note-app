@@ -50,9 +50,12 @@ function validPasswordChars(password: string) {
 	return /^[a-zA-Z0-9~`!@#$%^&*()_\\+={[}\]|:;"'<,>.?/-]+$/.test(password)
 }
 
+export function isUsernameValid(username: string) {
+	return validUsernameLength(username) && validUsernameChars(username)
+}
+
 export function areUsernameAndPasswordValid(username, password) {
-	return validUsernameLength(username)
-		&& validUsernameChars(username)
+	return isUsernameValid(username)
 		&& validPasswordLength(password)
 		&& validPasswordChars(password)
 
