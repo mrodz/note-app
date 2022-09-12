@@ -251,7 +251,7 @@ export const shareDocument = catchRecordNotFound(async function ({ userId, sessi
 
 	return {
 		username: guestUsername,
-		id: idFromGuestUsername
+		id: idFromGuestUsername.id
 	}
 	// } catch (e) {
 	// 	console.log(e)

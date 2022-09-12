@@ -1,8 +1,16 @@
-import { Button, Dialog, DialogActions, DialogContentText, DialogTitle, Divider, TextField, Typography } from "@mui/material"
+import {
+	Button,
+	Dialog,
+	DialogActions,
+	DialogContentText,
+	DialogTitle,
+	Divider,
+	TextField,
+	Typography
+} from "@mui/material"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
-import DoNotTouchIcon from '@mui/icons-material/DoNotTouch'
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import Editor from 'ckeditor5-custom-build/build/ckeditor'
 
@@ -11,9 +19,8 @@ import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
-import { ArrowBackIosNew, Share } from "@mui/icons-material"
+import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon } from "@mui/icons-material"
 import { AnimatePresence, motion } from "framer-motion"
-import ShareButton from "./ShareButton"
 import { isUsernameValid } from "../Register/Register"
 
 const AccessDenied = memo(() => {
