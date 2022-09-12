@@ -56,7 +56,7 @@ export default function UserDocument() {
 		if (!user?.sessionId) {
 			navigate(`/login?next=/d/${params.id}`)
 			return
-		};
+		}
 
 		(async () => {
 			const result = await post.to('/load-doc').send({
@@ -67,7 +67,7 @@ export default function UserDocument() {
 
 			if (result.ok) {
 				setDocument(result.json)
-				setLastSave(new Date(result.json.lastUpdated));
+				setLastSave(new Date(result.json.lastUpdated))
 				globalThis.document.title = `${getActionVerb()} '${result.json.title}'`
 			} else {
 				setError(result.json)
@@ -75,7 +75,7 @@ export default function UserDocument() {
 		})()
 	}, [user?.accountId, user?.sessionId, params?.id, navigate])
 
-	const timeoutRef = useRef(null);
+	const timeoutRef = useRef(null)
 
 	useEffect(() => {
 		return () => {
@@ -111,7 +111,7 @@ export default function UserDocument() {
 		}
 	}, [documentRef.current?.value, documentChange])
 
-	const test = useRef(0);
+	const test = useRef(0)
 
 	const documentChangeThrottle = requirePrivilege(2, useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
 		const waiting = throttlePause
@@ -131,7 +131,7 @@ export default function UserDocument() {
 	}, [documentChange, throttlePause]))
 
 	function dashboardClick() {
-		navigate('/dashboard');
+		navigate('/dashboard')
 	}
 
 	return (

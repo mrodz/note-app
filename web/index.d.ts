@@ -3,7 +3,6 @@ declare module '*.png'
 declare module '*.ts'
 
 declare module 'ckeditor5-custom-build/build/ckeditor' {
-	const Editor: any;
-
-	export = Editor;
+	const Editor: any
+	export = Editor
 }

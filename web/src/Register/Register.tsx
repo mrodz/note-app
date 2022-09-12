@@ -1,11 +1,11 @@
-import { Card, TextField, Typography, FormControl, Tooltip } from "@mui/material";
+import { Card, TextField, Typography, FormControl, Tooltip } from "@mui/material"
 import { LoadingButton as Button } from "@mui/lab"
-import { useRef, useState } from "react";
+import { useRef, useState } from "react"
 import fetch from "node-fetch"
-import { ThrottledCallback } from "../App";
-import { useNavigate } from "react-router";
-import { _login } from "../Login/Login";
-import { clearNotifications, pushNotification } from "../App/App";
+import { ThrottledCallback } from "../App"
+import { useNavigate } from "react-router"
+import { _login } from "../Login/Login"
+import { clearNotifications, pushNotification } from "../App/App"
 
 type SetStateFunction<T> = React.Dispatch<React.SetStateAction<T>>
 
@@ -63,18 +63,18 @@ function isFormValid(username, password, passwordConfirm) {
 }
 
 export default function Login() {
-	const [username, setUsername] = useState<[string, keyof typeof USERNAME_MESSAGES]>(['', -1]);
-	const [password, setPassword] = useState<[string, keyof typeof PASSWORD_MESSAGES]>(['', -1]);
-	const [passwordConfirm, setPasswordConfirm] = useState<[string, keyof typeof PASSWORD_CONFIRM_MESSAGES]>(['', -1]);
-	const [loading, setLoading] = useState<boolean>(false);
+	const [username, setUsername] = useState<[string, keyof typeof USERNAME_MESSAGES]>(['', -1])
+	const [password, setPassword] = useState<[string, keyof typeof PASSWORD_MESSAGES]>(['', -1])
+	const [passwordConfirm, setPasswordConfirm] = useState<[string, keyof typeof PASSWORD_CONFIRM_MESSAGES]>(['', -1])
+	const [loading, setLoading] = useState<boolean>(false)
 	const [count, setCount] = useState(1)
 	const navigate = useNavigate()
 
-	const a = username[0], b = password[0], c = passwordConfirm[0];
+	const a = username[0], b = password[0], c = passwordConfirm[0]
 
 	let usernameRef = useRef(null),
 		passwordRef = useRef(null),
-		passwordConfirmRef = useRef(null);
+		passwordConfirmRef = useRef(null)
 
 	const sendRegisterRequest = async (_key: number, username: string, password: string, passwordConfirm: string) => {
 		setLoading(true)
@@ -90,8 +90,8 @@ export default function Login() {
 				headers: { 'Content-Type': 'application/json' }
 			})
 
-			const data = await response.json();
-			const success = response.status === 200;
+			const data = await response.json()
+			const success = response.status === 200
 
 			if (success) {
 				await _login(data.username, password)
@@ -129,7 +129,7 @@ export default function Login() {
 							<TextField error={username[1] > 0} label="Username" inputRef={usernameRef}
 								helperText={USERNAME_MESSAGES[username[1]]}
 								color="secondary" onChange={_ => onType(usernameRef.current.value, setUsername, () => {
-									let _username = usernameRef.current.value;
+									let _username = usernameRef.current.value
 
 									if (!validUsernameLength(_username)) return 1
 									if (!validUsernameChars(_username)) return 2
@@ -141,7 +141,7 @@ export default function Login() {
 							<TextField error={password[1] > 0} label="Password" inputRef={passwordRef}
 								helperText={PASSWORD_MESSAGES[password[1]]} type="password"
 								color="secondary" onChange={_ => onType(passwordRef.current.value, setPassword, () => {
-									let _password = passwordRef.current.value;
+									let _password = passwordRef.current.value
 
 									if (!validPasswordLength(_password)) return 1
 									if (!validPasswordChars(_password)) return 2

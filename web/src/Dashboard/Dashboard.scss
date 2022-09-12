@@ -43,6 +43,24 @@ $padding: 2rem;
 	height: 100%;	
 }
 
+.Dashboard-top-createdocument:hover > #create-document {
+	animation: spin .5s 1 forwards;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	50% {
+		transform: translateY(-20px);
+	}
+
+	100% {
+		transform: translateY(0px) rotateZ(360deg);
+	}
+}
+
 /// MEDIA QUERIES
 
 @media only screen and (max-width: 1400px) {

@@ -1,11 +1,11 @@
 import React, { useContext, useRef } from 'react'
-import { Button } from '@mui/material';
-import { Context } from '../AccountContext';
-import { ThrottledCallback } from '.';
-import { clearNotifications, post, pushNotification } from './App';
+import { Button } from '@mui/material'
+import { Context } from '../AccountContext'
+import { ThrottledCallback } from '.'
+import { clearNotifications, post, pushNotification } from './App'
 
 export default function LogoutButton() {
-	const [loading, setLoading] = React.useState(false);
+	const [loading, setLoading] = React.useState(false)
 	const [count, setCount] = React.useState(1)
 
 	const user = useContext(Context)

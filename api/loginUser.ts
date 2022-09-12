@@ -109,7 +109,7 @@ export async function loginUser({ username, password }, ctx?: Context) {
 	const passwordMatches = await bcrypt.compare(password, user.password)
 
 	if (!passwordMatches)
-		throw new CaughtApiException(messages.passwordError, 'Password is not valid');
+		throw new CaughtApiException(messages.passwordError, 'Password is not valid')
 
 	let sessionId: { id: string }
 

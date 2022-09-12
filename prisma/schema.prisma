@@ -9,15 +9,14 @@ datasource db {
 }
 
 model User {
-  id                 String     @id @unique @default(uuid())
-  username           String     @unique
-  password           String
-  createdAt          DateTime   @default(now())
-  documents          Document[] @relation("owner")
-  guestDocuments     Document[] @relation("guest")
-  documentCount      Int        @default(0)
-  Session            Session?
-  documentDocumentId String?
+  id             String     @id @unique @default(uuid())
+  username       String     @unique
+  password       String
+  createdAt      DateTime   @default(now())
+  documents      Document[] @relation("owner")
+  guestDocuments Document[] @relation("guest")
+  documentCount  Int        @default(0)
+  Session        Session?
 
   @@index([username])
 }

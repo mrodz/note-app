@@ -1,20 +1,22 @@
-import { MockContext, Context, createMockContext } from "../singleton";
-import createUser, { isValidPasswordChars, isValidPasswordLength, isValidUsernameChars, isValidUsernameLength } from "../createUser";
+import { MockContext, Context, createMockContext } from "../singleton"
+import createUser, { isValidPasswordChars, isValidPasswordLength, isValidUsernameChars, isValidUsernameLength } from "../createUser"
+import { User } from "../generated/client"
 
-let mockContext: MockContext;
-let context: Context;
+let mockContext: MockContext
+let context: Context
 
 beforeEach(() => {
-  mockContext = createMockContext();
-  context = mockContext as unknown as Context;
+  mockContext = createMockContext()
+  context = mockContext as unknown as Context
 })
 
 test('should create new user', async () => {
-  const user = {
+  const user: User = {
     id: 'UUID-here',
     username: 'Loremp',
     password: 'julio22',
-    createdAt: new Date('2023-08-14T06:51:03.404Z')
+    createdAt: new Date('2023-08-14T06:51:03.404Z'),
+    documentCount: 0,
   }
 
   mockContext.prisma.user.create.mockResolvedValue(user)
@@ -22,11 +24,12 @@ test('should create new user', async () => {
 })
 
 test('should not create duplicate account (so long as mateo\'s account exists)', async () => {
-  const user = {
+  const user: User = {
     id: 'UUID-here',
     username: 'mateo',
     password: '123456',
-    createdAt: new Date('2023-08-14T06:51:03.404Z')
+    createdAt: new Date('2023-08-14T06:51:03.404Z'),
+    documentCount: 0
   }
 
   mockContext.prisma.user.create.mockResolvedValue(user)
@@ -34,9 +37,9 @@ test('should not create duplicate account (so long as mateo\'s account exists)',
 })
 
 test('all usernames should have valid lengths', () => {
-  expect(isValidUsernameLength('MtRm1')).toBe(true);
-  expect(isValidUsernameLength('LGamer21')).toBe(true);
-  expect(isValidUsernameLength('Davewonder16')).toBe(true);
+  expect(isValidUsernameLength('MtRm1')).toBe(true)
+  expect(isValidUsernameLength('LGamer21')).toBe(true)
+  expect(isValidUsernameLength('Davewonder16')).toBe(true)
 })
 
 test('all usernames should have valid characters', () => {

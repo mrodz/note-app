@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material"
 import { useState } from "react";
 
 export function TOS() {
@@ -8,7 +8,7 @@ export function TOS() {
 	const handleClose = () => setOpen(false)
 
 	return (
-		<Dialog open={open}>
+		<Dialog open={open} onClose={() => setOpen(false)}>
 			<DialogTitle>
 				Terms of Service
 			</DialogTitle>

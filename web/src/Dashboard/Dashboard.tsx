@@ -21,17 +21,17 @@ import {
 	Tooltip,
 	Typography
 } from '@mui/material'
-import AlarmOnIcon from '@mui/icons-material/AlarmOn';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AlarmOnIcon from '@mui/icons-material/AlarmOn'
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { AnimatePresence, motion } from 'framer-motion'
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
-import CloseIcon from '@mui/icons-material/Close';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { TransitionProps } from '@mui/material/transitions';
-import { useNavigate } from 'react-router';
-import { post, pushNotification } from '../App/App';
-import sanitizeHtml from 'sanitize-html';
+import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
+import CloseIcon from '@mui/icons-material/Close'
+import AddCircleIcon from '@mui/icons-material/AddCircle'
+import { TransitionProps } from '@mui/material/transitions'
+import { useNavigate } from 'react-router'
+import { post, pushNotification } from '../App/App'
+import sanitizeHtml from 'sanitize-html'
 
 /**
  * Greets a user according to the time of day.
@@ -62,8 +62,8 @@ const blurbs = {
  * @returns a blurb
  */
 function getBlurb(): string {
-	const n = Math.floor(Math.random() * 10);
-	return blurbs[n];
+	const n = Math.floor(Math.random() * 10)
+	return blurbs[n]
 }
 
 /**
@@ -101,7 +101,7 @@ const Note = () => {
  * @returns whether it can be a valid title.
  */
 function validateTitle(title: string): boolean {
-	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title);
+	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title)
 }
 
 /**
@@ -118,12 +118,12 @@ function documentsToCards(list: any[]) {
  */
 const Transition = forwardRef(function Transition(
 	props: TransitionProps & {
-		children: ReactElement<any, any>;
+		children: ReactElement<any, any>
 	},
 	ref: React.Ref<unknown>,
 ) {
-	return <Slide direction="up" ref={ref} {...props} />;
-});
+	return <Slide direction="up" ref={ref} {...props} />
+})
 
 /**
  * Debugger function.
@@ -136,7 +136,7 @@ const l = function <T>(arg0: T): T { // eslint-disable-line
 }
 
 export function formatDate(lastUpdated: Date, precise: boolean = false) {
-	const today = new Date();
+	const today = new Date()
 
 	/**
 	 * Ensures all numbers are padded with leading zeroes.
@@ -304,8 +304,8 @@ export default function Dashboard() {
 	 * @param e a document object.
 	 */
 	const openSettings = (e) => {
-		setSettingsOpen({ open: true, document: e });
-		setSettingsRenameText(e.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''));
+		setSettingsOpen({ open: true, document: e })
+		setSettingsRenameText(e.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''))
 	}
 
 	/**
@@ -320,6 +320,7 @@ export default function Dashboard() {
 	useEffect(() => {
 		document.title = 'Dashboard'
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
+
 		(async () => {
 			await requestDocuments()
 		})()
@@ -352,7 +353,7 @@ export default function Dashboard() {
 			// if the document was created, re-render the dashboard to include it in the list.
 			if (result.ok) {
 				navigate(`/d/${result.json.documentId}`)
-			};
+			}
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
 		}
@@ -435,7 +436,7 @@ export default function Dashboard() {
 					<div style={{ flexGrow: 1 }}></div>
 					<div className='Dashboard-top-createdocument'>
 						<Tooltip title="Create document">
-							<IconButton onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
+							<IconButton id="create-document" onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
 								<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
 							</IconButton>
 						</Tooltip>

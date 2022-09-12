@@ -1,6 +1,6 @@
-import { CaughtApiException, prisma } from ".";
-import { Document } from "./generated/client";
-import { Context } from "./singleton";
+import { CaughtApiException, prisma } from "."
+import { Document } from "./generated/client"
+import { Context } from "./singleton"
 
 export function catchRecordNotFound<T extends Function>(callback: T, message: string): T {
 	return ((...args: any[]) => {
@@ -97,15 +97,15 @@ const userOwnsDocument = catchRecordNotFound(async function (documentId, userId,
 		}
 	})
 
-	if (document?.userId === userId && document !== null) return document;
+	if (document?.userId === userId && document !== null) return document
 
-	return void document;
+	return void document
 }, "Document does not exist for user.")
 
 export async function getDocument({ sessionId, userId, documentId }: DocumentActionAuth & withDocId, ctx?: Context) {
 	await validateSession(sessionId, userId, ctx)
 
-	const { privilege } = await canAccessDocument({ documentId, userId }, ctx);
+	const { privilege } = await canAccessDocument({ documentId, userId }, ctx)
 
 	const canRead = privilege > 0
 	const canWrite = privilege === 2
@@ -166,14 +166,14 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 }, 'Invalid user id')
 
 function validateTitle(title: string): boolean {
-	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title);
+	return title.length > 0 && title.length < 64 && !/^\s+$/.test(title)
 }
 
 export const renameDocument = catchRecordNotFound(async function ({ sessionId, userId, title, documentId }: CreateDocParams & DeleteDocParams, ctx?: Context) {
 	if (!validateTitle(title))
 		throw new CaughtApiException("Invalid title")
 
-	const userIdOfSession = await validateSession(sessionId, userId, ctx);
+	const userIdOfSession = await validateSession(sessionId, userId, ctx)
 
 	if (!await userOwnsDocument(documentId, userId, ctx)) {
 		throw new CaughtApiException("Access denied")
@@ -186,9 +186,9 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 	})
 
 	if (count !== 0)
-		throw new CaughtApiException("A document with this title already exists!");
+		throw new CaughtApiException("A document with this title already exists!")
 
-	console.log('#', documentId);
+	console.log('#', documentId)
 
 	const id = await (ctx?.prisma ?? prisma).document.update({
 		where: {
@@ -229,7 +229,7 @@ export const shareDocument = catchRecordNotFound(async function ({ userId, sessi
 }, "Not found")
 
 export const deleteDocument = catchRecordNotFound(async function ({ sessionId, userId, documentId }: DeleteDocParams, ctx?: Context) {
-	const user = await validateSession(sessionId, userId, ctx);
+	const user = await validateSession(sessionId, userId, ctx)
 
 	if (!await userOwnsDocument(documentId, userId, ctx)) {
 		throw new CaughtApiException("Access denied")
@@ -260,8 +260,6 @@ export const deleteDocument = catchRecordNotFound(async function ({ sessionId, u
 }, 'Document does not exist for user')
 
 export const writeDocContent = catchRecordNotFound(async function ({ sessionId, userId, documentId, newContent }: WriteDocContentParams, ctx?: Context) {
-	// console.log('INCOMING: ', sessionId, userId);
-
 	const user = await validateSession(sessionId, userId, ctx)
 
 	if (!await userOwnsDocument(documentId, user.id, ctx)) {
@@ -293,7 +291,7 @@ export const createDocument = catchRecordNotFound(async function ({ sessionId, u
 	if (!validateTitle(title))
 		throw new CaughtApiException("Invalid title")
 
-	const user = await validateSession(sessionId, userId, ctx);
+	const user = await validateSession(sessionId, userId, ctx)
 
 	let count = await (ctx?.prisma ?? prisma).document.count({
 		where: {
@@ -327,5 +325,5 @@ export const createDocument = catchRecordNotFound(async function ({ sessionId, u
 		}
 	})
 
-	return { documentId: document.documentId };
+	return { documentId: document.documentId }
 }, 'Invalid user id')

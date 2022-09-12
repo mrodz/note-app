@@ -1,15 +1,25 @@
-import { Button, Card, TextField, Typography, FormControl, Chip, Tooltip, Divider, IconButton } from "@mui/material";
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import { useState, useRef, useContext, useEffect } from "react";
-import { useNavigate } from "react-router";
-import { Context } from "../AccountContext";
-import { ThrottledCallback } from "../App";
-import { areUsernameAndPasswordValid } from "../Register/Register";
-import { motion } from 'framer-motion';
+import {
+	Button,
+	Card,
+	TextField,
+	Typography,
+	FormControl,
+	Chip,
+	Tooltip,
+	Divider,
+	IconButton
+} from "@mui/material"
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'
+import { useState, useRef, useContext, useEffect } from "react"
+import { useNavigate } from "react-router"
+import { Context } from "../AccountContext"
+import { ThrottledCallback } from "../App"
+import { areUsernameAndPasswordValid } from "../Register/Register"
+import { motion } from 'framer-motion'
 import './Login.scss'
-import { Link } from "react-router-dom";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { clearNotifications, post, pushNotification } from "../App/App";
+import { Link } from "react-router-dom"
+import { Visibility, VisibilityOff } from "@mui/icons-material"
+import { clearNotifications, post, pushNotification } from "../App/App"
 
 export async function _login(username, password) {
 	if (!areUsernameAndPasswordValid(username, password)) return
@@ -32,17 +42,17 @@ export async function _login(username, password) {
 }
 
 export default function Login() {
-	const [username, setUsername] = useState<string>('');
-	const [password, setPassword] = useState<string>('');
-	const [loading, setLoading] = useState<boolean>(false);
-	const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
+	const [username, setUsername] = useState<string>('')
+	const [password, setPassword] = useState<string>('')
+	const [loading, setLoading] = useState<boolean>(false)
+	const [passwordVisible, setPasswordVisible] = useState<boolean>(false)
 
 	const [count, setCount] = useState(1)
 
 	let usernameRef = useRef(null),
-		passwordRef = useRef(null);
+		passwordRef = useRef(null)
 
-	let user = useContext(Context);
+	let user = useContext(Context)
 
 	const navigate = useNavigate()
 
@@ -76,7 +86,7 @@ export default function Login() {
 
 				if (urlParams.has('next')) {
 					const next = urlParams.get('next')
-					navigate(next, { replace: true });
+					navigate(next, { replace: true })
 				} else {
 					navigate('/dashboard', { replace: true })
 				}
@@ -97,7 +107,7 @@ export default function Login() {
 	}
 
 	const hidePassword = () => {
-		setPasswordVisible(!passwordVisible);
+		setPasswordVisible(!passwordVisible)
 	}
 
 	const loginButton = useRef(new ThrottledCallback(sendLoginRequest, 5_000))
@@ -110,7 +120,7 @@ export default function Login() {
 			pushNotification(`Saved login session for ${user?.username}`, {})
 			navigate('/dashboard')
 		}
-	}, [navigate, user?.sessionId, user?.username]);
+	}, [navigate, user?.sessionId, user?.username])
 
 	return (
 		<>

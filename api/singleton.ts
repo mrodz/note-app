@@ -1,5 +1,5 @@
-import { PrismaClient } from "./generated/client";
-import { mockDeep, DeepMockProxy } from "jest-mock-extended";
+import { PrismaClient } from "./generated/client"
+import { mockDeep, DeepMockProxy } from "jest-mock-extended"
 
 /**
  * Context which holds a reference to a `PrismaClient`.

@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react"
 
 export interface LocalStorageSessionInfo {
 	username: string,
@@ -48,12 +48,12 @@ export function AccountContext(props: { children: any }) {
 			setAccount(undefined)
 		}
 
-		document.addEventListener('on:account-login', onAccountLogin);
-		document.addEventListener('on:account-logout', onAccountLogout);
+		document.addEventListener('on:account-login', onAccountLogin)
+		document.addEventListener('on:account-logout', onAccountLogout)
 
 		return () => {
-			document.removeEventListener('on:account-login', onAccountLogin);
-			document.removeEventListener('on:account-logout', onAccountLogout);
+			document.removeEventListener('on:account-login', onAccountLogin)
+			document.removeEventListener('on:account-logout', onAccountLogout)
 		}
 	}, [])
 

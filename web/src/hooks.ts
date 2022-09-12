@@ -28,7 +28,7 @@ type CounterCallback = (difference?: number) => void
 type UseCounterYield = [number, CounterCallback]
 
 export function useCounter(initialValue: number): UseCounterYield {
-	const [count, setCount] = useState(initialValue);
+	const [count, setCount] = useState(initialValue)
 
 	const increment = (difference: number = 1) => setCount(count + difference)
 
@@ -41,27 +41,27 @@ export function useCounter(initialValue: number): UseCounterYield {
 const initBeforeUnLoad = (showExitPrompt) => {
 	window.onbeforeunload = (event) => {
 		if (showExitPrompt) {
-			const e = event || window.event;
-			e.preventDefault();
+			const e = event || window.event
+			e.preventDefault()
 			if (e) {
-				e.returnValue = '';
+				e.returnValue = ''
 			}
-			return '';
+			return ''
 		}
-	};
-};
+	}
+}
 
 // Hook
 export default function useExitPrompt(bool: boolean): [boolean, (arg0: boolean) => void] {
-	const [showExitPrompt, setShowExitPrompt] = useState(bool);
+	const [showExitPrompt, setShowExitPrompt] = useState(bool)
 
 	window.onload = function () {
-		initBeforeUnLoad(showExitPrompt);
-	};
+		initBeforeUnLoad(showExitPrompt)
+	}
 
 	useEffect(() => {
-		initBeforeUnLoad(showExitPrompt);
-	}, [showExitPrompt]);
+		initBeforeUnLoad(showExitPrompt)
+	}, [showExitPrompt])
 
-	return [showExitPrompt, setShowExitPrompt];
+	return [showExitPrompt, setShowExitPrompt]
 }

@@ -1,18 +1,19 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import Landing from '../Landing/Landing';
-import NotFound from '../NotFound/NotFound';
-import Login from '../Login/Login';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import Landing from '../Landing/Landing'
+import NotFound from '../NotFound/NotFound'
+import Login from '../Login/Login'
 import Register from '../Register/Register'
-import './App.css';
-import { useContext, useEffect } from 'react';
-import { Button, createTheme, ThemeProvider } from '@mui/material';
-import { Context, LocalStorageSessionInfo } from '../AccountContext';
-import AppHeading from './AppHeading';
-import Dashboard from '../Dashboard/Dashboard';
+import './App.css'
+import { useContext, useEffect } from 'react'
+import { Button, createTheme, ThemeProvider } from '@mui/material'
+import { Context, LocalStorageSessionInfo } from '../AccountContext'
+import AppHeading from './AppHeading'
+import Dashboard from '../Dashboard/Dashboard'
 import { AnimatePresence } from 'framer-motion'
-import UserDocument from '../Documents/Document';
-import Post from '../postRequest';
-import { useSnackbar } from 'notistack';
+import UserDocument from '../Documents/Document'
+import Post from '../postRequest'
+import { useSnackbar } from 'notistack'
+import { TOS } from '../Register/TOS'
 
 export const post = Post.config({
   baseURL: 'http://localhost:5000/api',
@@ -54,7 +55,7 @@ function App() {
         closeSnackbar()
       }
 
-      const key = 'SNACKBAR_' + Math.random();
+      const key = 'SNACKBAR_' + Math.random()
       enqueueSnackbar(e.detail.message, {
         variant: e.detail.variant,
         persist: e.detail.persist,
@@ -91,11 +92,15 @@ function App() {
   const user = useContext<LocalStorageSessionInfo>(Context)
   const location = useLocation()
 
+  console.log(location);
+
   return (
     <ThemeProvider theme={LoginTheme}>
       <div className="App">
         <AnimatePresence>
-          <AppHeading user={user} bgColor={LoginTheme.palette.primary.main} />
+          <AppHeading locations={{
+            '/dashboard': true,
+          }} location={location.pathname} user={user} bgColor={LoginTheme.palette.primary.main} />
           <Routes location={location} key={location.pathname}>
             <Route path='*' element={<NotFound />} />
             <Route path='/' element={<Landing />} />
@@ -103,11 +108,12 @@ function App() {
             <Route path='/register' element={<Register />} />
             <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
             <Route path='/d/:id' element={<UserDocument />} />
+            <Route path='/tos' element={<TOS />} />
           </Routes>
         </AnimatePresence>
       </div>
     </ThemeProvider>
-  );
+  )
 }
 
-export default App;
+export default App

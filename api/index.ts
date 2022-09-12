@@ -58,8 +58,8 @@ export interface CaughtApiException {
 
 export class CaughtApiException {
 	constructor(title: string, description?: string, code?: number) {
-		this.name = title;
-		this.message = description ?? 'None';
+		this.name = title
+		this.message = description ?? 'None'
 		this.code = code ?? 400
 	}
 }
@@ -83,7 +83,7 @@ export const loop = async (i: number, cb: () => void) => {
 
 function wrapRestFunction<T = any, R = any>(restFunction: (body: T, ctx?: Context) => Promise<R>) {
 	return async function (req: ModelRequest<T>, res: ModelResponse) {
-		const body = req.body;
+		const body = req.body
 		try {
 			let methodResponse = await restFunction(body)
 			res.send(methodResponse)
@@ -120,7 +120,7 @@ SERVER: {
 		// await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
 		// await prisma.document.deleteMany()
 
-		console.log("server started " + port);
+		console.log("server started " + port)
 
 		TESTS: {
 			break TESTS // comment this out when you're testing.
@@ -134,13 +134,13 @@ SERVER: {
 				method: 'post',
 				body: JSON.stringify(req),
 				headers: { 'Content-Type': 'application/json' }
-			});
+			})
 
-			const data = await response.json();
+			const data = await response.json()
 			console.log('$', data, response.status)
 
 		}
 	})
 }
 
-export default app;
+export default app

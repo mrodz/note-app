@@ -53,7 +53,7 @@ class PostRequestSender<T = any> {
 		// response = this.config?.interceptor?.(response) ?? response
 		if (!response.ok) console.trace(response.status, data, response)
 
-		let result = {};
+		let result = {}
 
 		for (let setting of get) {
 			switch (setting) {
