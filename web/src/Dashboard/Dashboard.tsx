@@ -255,21 +255,28 @@ export default function Dashboard() {
 							</div>
 							<div style={{ flexGrow: 1 }}></div>
 							<div>
-								<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
-									<MoreVertIcon />
-								</IconButton>
+								<Tooltip title="More" enterDelay={1000}>
+									<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
+										<MoreVertIcon />
+									</IconButton>
+								</Tooltip>
 							</div>
 						</div>
 						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-						<Typography variant="caption" mr="1rem">
-							<span dangerouslySetInnerHTML={{
-								__html: e.preview === null || /^\s*$/.test(e.preview)
-									? "<i>Empty Document</i>"
-									: trimString(sanitizeHtml(e.preview, {
-										allowedTags: ['b', 'i', 'strong', 'u', 'br'],
-									}))
-							}}></span>
-						</Typography>
+						<Tooltip title="Preview" placement="top" enterDelay={1000}>
+							<div className="Dashboard-Note-preview">
+								<Typography variant="caption" mr="1rem">
+									<span dangerouslySetInnerHTML={{
+										__html: e.preview === null || /^\s*$/.test(e.preview)
+											? "<i>Empty Document</i>"
+											: trimString(sanitizeHtml(e.preview, {
+												allowedTags: ['b', 'i', 'strong', 'u', 'br', 'p'],
+											}))
+									}} />
+								</Typography>
+							</div>
+						</Tooltip>
+
 					</div>
 				</ListItem>
 			)
@@ -356,6 +363,7 @@ export default function Dashboard() {
 			}
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
+			createDocTitleRef.current.value = ''
 		}
 	}
 
@@ -421,42 +429,45 @@ export default function Dashboard() {
 	}
 
 	return (
-		<AnimatePresence>
-			<motion.div
-				className='Dashboard'
-				initial={{ width: 0 }}
-				animate={{ width: 'inherit' }}
-				exit={{ x: window.innerWidth }}
-			>
-				<div className="Dashboard-top">
-					<div>
-						<Typography variant="h3">{messages.greeting}, {user?.username}!</Typography>
-						<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
-					</div>
-					<div style={{ flexGrow: 1 }}></div>
-					<div className='Dashboard-top-createdocument'>
-						<Tooltip title="Create document">
-							<IconButton id="create-document" onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
-								<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
-							</IconButton>
-						</Tooltip>
-					</div>
-				</div>
-				{(!documents.loaded || documents?.list?.length > 0)
-					? (
-						<div className="Dashboard-notes">
-							{documentsToCards(!documents.loaded
-								? Array(Number(user?.documentCount)).fill(<Note />)
-								: notesFromDocuments(documents.list))
-							}
+		<>
+			<AnimatePresence>
+				<motion.div
+					key="dashboard"
+					className='Dashboard'
+					initial={{ width: 0 }}
+					animate={{ width: 'inherit' }}
+					exit={{ x: window.innerWidth }}
+				>
+					<div className="Dashboard-top">
+						<div>
+							<Typography variant="h3">{messages.greeting}, {user?.username}!</Typography>
+							<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
 						</div>
-					) : (
-						<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-							You don&apos;t have have any documents yet!
-						</Typography>
-					)
-				}
-			</motion.div>
+						<div style={{ flexGrow: 1 }}></div>
+						<div className='Dashboard-top-createdocument'>
+							<Tooltip title="Create document">
+								<IconButton id="create-document" onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
+									<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
+								</IconButton>
+							</Tooltip>
+						</div>
+					</div>
+					{(!documents.loaded || documents?.list?.length > 0)
+						? (
+							<div className="Dashboard-notes">
+								{documentsToCards(!documents.loaded
+									? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
+									: notesFromDocuments(documents.list))
+								}
+							</div>
+						) : (
+							<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+								You don&apos;t have have any documents yet!
+							</Typography>
+						)
+					}
+				</motion.div>
+			</AnimatePresence>
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
 				<DialogTitle>Create Document</DialogTitle>
@@ -552,6 +563,6 @@ export default function Dashboard() {
 					<Button variant="contained" onClick={() => setConfirmDelete(false)}>Cancel</Button>
 				</DialogActions>
 			</Dialog>
-		</AnimatePresence>
+		</>
 	)
 }

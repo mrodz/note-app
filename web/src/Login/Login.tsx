@@ -15,7 +15,7 @@ import { useNavigate } from "react-router"
 import { Context } from "../AccountContext"
 import { ThrottledCallback } from "../App"
 import { areUsernameAndPasswordValid } from "../Register/Register"
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import './Login.scss'
 import { Link } from "react-router-dom"
 import { Visibility, VisibilityOff } from "@mui/icons-material"
@@ -123,8 +123,14 @@ export default function Login() {
 	}, [navigate, user?.sessionId, user?.username])
 
 	return (
-		<>
-			<motion.div className="Login-root">
+		<AnimatePresence>
+			<motion.div
+				key="login"
+				className="Login-root"
+				initial={{ width: 0 }}
+				animate={{ width: 'inherit' }}
+				exit={{ x: window.innerWidth }}
+			>
 				<div className="-super-Login-Card">
 					<Card className="Login-Card">
 						<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
@@ -168,6 +174,6 @@ export default function Login() {
 					</Card>
 				</div>
 			</motion.div >
-		</>
+		</AnimatePresence>
 	)
 }

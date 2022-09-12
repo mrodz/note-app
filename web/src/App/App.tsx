@@ -9,7 +9,6 @@ import { Button, createTheme, ThemeProvider } from '@mui/material'
 import { Context, LocalStorageSessionInfo } from '../AccountContext'
 import AppHeading from './AppHeading'
 import Dashboard from '../Dashboard/Dashboard'
-import { AnimatePresence } from 'framer-motion'
 import UserDocument from '../Documents/Document'
 import Post from '../postRequest'
 import { useSnackbar } from 'notistack'
@@ -92,25 +91,21 @@ function App() {
   const user = useContext<LocalStorageSessionInfo>(Context)
   const location = useLocation()
 
-  console.log(location);
-
   return (
     <ThemeProvider theme={LoginTheme}>
       <div className="App">
-        <AnimatePresence>
-          <AppHeading locations={{
-            '/dashboard': true,
-          }} location={location.pathname} user={user} bgColor={LoginTheme.palette.primary.main} />
-          <Routes location={location} key={location.pathname}>
-            <Route path='*' element={<NotFound />} />
-            <Route path='/' element={<Landing />} />
-            <Route path='/login' element={<Login />} />
-            <Route path='/register' element={<Register />} />
-            <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
-            <Route path='/d/:id' element={<UserDocument />} />
-            <Route path='/tos' element={<TOS />} />
-          </Routes>
-        </AnimatePresence>
+        <AppHeading locations={{
+          '/dashboard': true,
+        }} location={location.pathname} user={user} bgColor={LoginTheme.palette.primary.main} />
+        <Routes location={location} key={location.pathname}>
+          <Route path='*' element={<NotFound />} />
+          <Route path='/' element={<Landing />} />
+          <Route path='/login' element={<Login />} />
+          <Route path='/register' element={<Register />} />
+          <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
+          <Route path='/d/:id' element={<UserDocument />} />
+          <Route path='/tos' element={<TOS />} />
+        </Routes>
       </div>
     </ThemeProvider>
   )

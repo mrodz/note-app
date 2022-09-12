@@ -11,6 +11,7 @@ $padding: 2rem;
 .Dashboard-notes {
 	display: grid;
 	grid-template-columns: 1fr 1fr 1fr 1fr;
+	grid-auto-rows: 20rem;
 }
 
 .Dashboard-Note {
@@ -18,6 +19,13 @@ $padding: 2rem;
 	width: 100%;
 	height: -webkit-fill-available;
 	height: -moz-available;
+	display: flex;
+	flex-direction: column;
+}
+
+.Dashboard-Note-preview {
+	flex-grow: 1;
+	overflow-y: auto;
 }
 
 .Dashboard-top {
