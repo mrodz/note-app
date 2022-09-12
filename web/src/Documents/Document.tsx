@@ -137,9 +137,9 @@ export default function UserDocument() {
 	return (
 		<>
 			{user?.sessionId ? (
-				<>{
+				<AnimatePresence>{
 					!('name' in error) ? (
-						<div className="Document">
+						<div className="Document" key="document">
 							<div className="Document-tray">
 								<motion.div
 									className="Document-tray-main"
@@ -172,7 +172,7 @@ export default function UserDocument() {
 							</div>
 						</div>
 					) : <AccessDenied />
-				} </>
+				} </AnimatePresence>
 			) : "Please sign in."}
 		</>
 	)
