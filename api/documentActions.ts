@@ -1,4 +1,4 @@
-import { CaughtApiException, prisma } from "."
+import { CaughtApiException, logger, prisma } from "."
 import { isValidUsernameChars, isValidUsernameLength } from "./createUser"
 import { Document } from "./generated/client"
 import { Context } from "./singleton"
@@ -113,8 +113,11 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 	const canRead = privilege > 0
 	const canWrite = privilege === 2
 
-	if (privilege === 0) return {
-		privilege: 0
+	if (privilege === 0) {
+		console.log(`user (${userId} attempted to load a document to which they lacked access`)
+		return {
+			privilege: 0
+		}
 	}
 
 	const result = await (ctx?.prisma ?? prisma).document.findFirst({

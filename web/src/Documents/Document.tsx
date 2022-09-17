@@ -49,6 +49,9 @@ export default function UserDocument() {
 	const [throttlePause, setThrottlePause] = useState(false)
 	const [lastSave, setLastSave] = useState(new Date())
 	const [shareModalOpen, setShareModalOpen] = useState(false)
+	const [editor, setEditor] = useState({
+		editor: null
+	})
 
 
 	const params = useParams()
@@ -84,6 +87,8 @@ export default function UserDocument() {
 				setDocument(result.json)
 				setLastSave(new Date(result.json.lastUpdated))
 				globalThis.document.title = `${getActionVerb()} '${result.json.title}'`
+				console.log(result.json);
+
 			} else {
 				setError(result.json)
 			}
@@ -145,6 +150,29 @@ export default function UserDocument() {
 		}, 10_000)
 	}, [documentChange, throttlePause]))
 
+
+	useEffect(() => {
+		console.log('pp', document?.privilege);
+
+		const editor = (
+			<CKEditor
+				editor={Editor}
+				data={document?.content}
+				disabled={document?.privilege !== 2}
+				onBlur={async () => await documentChange()}
+				onChange={async () => {
+					await documentChangeThrottle()
+				}}
+				onReady={e => {
+					documentRef.current = e
+				}}
+			/>
+		)
+
+		setEditor({ editor: editor })
+
+	}, [document?.content, document?.privilege, documentChange, documentChangeThrottle])
+
 	function dashboardClick() {
 		navigate('/dashboard')
 	}
@@ -177,7 +205,7 @@ export default function UserDocument() {
 
 		return (
 			<>
-				<Button variant="contained" className="ShareButton" onClick={openModal}>
+				<Button disabled={document?.privilege !== 2} variant="contained" className="ShareButton" onClick={openModal}>
 					<Share sx={{ marginRight: '1rem' }} />
 					Share
 				</Button>
@@ -215,7 +243,7 @@ export default function UserDocument() {
 		<>
 			{user?.sessionId ? (
 				<AnimatePresence>{
-					!('name' in error) ? (
+					(document?.privilege !== 0) ? (
 						<div className="Document" key="document">
 							<div className="Document-tray">
 								<motion.div
@@ -234,18 +262,7 @@ export default function UserDocument() {
 										{document?.title} - {JSON.stringify(document?.guests)}
 									</Typography>
 									<div id="editor"></div>
-									<CKEditor
-										editor={Editor}
-										data={document?.content}
-										disabled={document?.privilege !== 2}
-										onBlur={async () => await documentChange()}
-										onChange={async () => {
-											await documentChangeThrottle()
-										}}
-										onReady={editor => {
-											documentRef.current = editor
-										}}
-									/>
+									{editor.editor}
 								</motion.div>
 							</div>
 						</div>
