@@ -29,8 +29,8 @@ type PostResponse<R = any> = {
 	ok?: boolean
 }
 
-type SendSettingsOptions = 'json' | 'code' | 'ok'
-type SendSettings = SendSettingsOptions[]
+type SendSettingsOptions<R> = keyof PostResponse<R>
+type SendSettings<R> = SendSettingsOptions<R>[]
 
 class PostRequestSender<T = any> {
 	config: PostConfig
@@ -41,15 +41,20 @@ class PostRequestSender<T = any> {
 		this.config = config
 	}
 
-	async send<R = any>(data: T, get: SendSettings = ['json', 'code', 'ok']): Promise<PostResponse<R>> {
+	async send<R = any>(data: T, get: SendSettings<R> = ['json', 'code', 'ok']): Promise<PostResponse<R>> {
 		let response = await fetch((this.config?.baseURL ?? '') + this.to, {
 			method: 'POST',
 			body: JSON.stringify(data),
 			headers: { 'Content-Type': 'application/json' }
 		})
 
-		const json = await response.json()
-		this.config?.interceptor?.(data, json)
+		let json
+
+		if ('interceptor' in this.config) {
+			json = await response.json()
+			this.config.interceptor?.(data, json)
+		}
+
 		// response = this.config?.interceptor?.(response) ?? response
 		if (!response.ok) console.trace(response.status, data, response)
 
@@ -58,7 +63,7 @@ class PostRequestSender<T = any> {
 		for (let setting of get) {
 			switch (setting) {
 				case 'json':
-					result = { ...result, json: json as R }
+					result = { ...result, json: json ?? await response.json() as R }
 					break
 				case 'code':
 					result = { ...result, code: response.status }

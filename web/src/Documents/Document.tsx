@@ -1,11 +1,20 @@
 import {
+	AvatarGroup,
 	Button,
 	Dialog,
 	DialogActions,
+	DialogContent,
 	DialogContentText,
 	DialogTitle,
 	Divider,
+	IconButton,
+	List,
+	ListItem,
+	ListItemAvatar,
+	ListItemSecondaryAction,
+	ListItemText,
 	TextField,
+	Tooltip,
 	Typography
 } from "@mui/material"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
@@ -19,9 +28,10 @@ import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
-import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon } from "@mui/icons-material"
+import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon, Delete } from "@mui/icons-material"
 import { AnimatePresence, motion } from "framer-motion"
 import { isUsernameValid } from "../Register/Register"
+import { avatarFromUsername } from "../App/AppHeading"
 
 const AccessDenied = memo(() => {
 	useEffect(() => {
@@ -41,18 +51,18 @@ const AccessDenied = memo(() => {
 	)
 })
 
+const avatarsFromGuests = (guests: Array<any>, tooltip?: boolean) => guests.map((e, i) => avatarFromUsername(e?.username, { key: i, tooltip: !!tooltip }))
+
 export default function UserDocument() {
 	const user = useContext(Context)
 
 	const [document, setDocument] = useState<any>({})
-	const [error, setError] = useState<any>({})
 	const [throttlePause, setThrottlePause] = useState(false)
 	const [lastSave, setLastSave] = useState(new Date())
 	const [shareModalOpen, setShareModalOpen] = useState(false)
 	const [editor, setEditor] = useState({
 		editor: null
 	})
-
 
 	const params = useParams()
 	const navigate = useNavigate()
@@ -87,10 +97,10 @@ export default function UserDocument() {
 				setDocument(result.json)
 				setLastSave(new Date(result.json.lastUpdated))
 				globalThis.document.title = `${getActionVerb()} '${result.json.title}'`
-				console.log(result.json);
-
 			} else {
-				setError(result.json)
+				pushNotification(result.json?.name ?? 'Could not load document', {
+					variant: 'error'
+				})
 			}
 		})()
 	}, [user?.accountId, user?.sessionId, params?.id, navigate])
@@ -126,8 +136,6 @@ export default function UserDocument() {
 			if (documentRef.current?.value !== undefined) {
 				documentChange()
 			}
-
-			// clearTimeout(timeoutRef.current)
 		}
 	}, [documentRef.current?.value, documentChange])
 
@@ -152,20 +160,14 @@ export default function UserDocument() {
 
 
 	useEffect(() => {
-		console.log('pp', document?.privilege);
-
 		const editor = (
 			<CKEditor
 				editor={Editor}
 				data={document?.content}
 				disabled={document?.privilege !== 2}
 				onBlur={async () => await documentChange()}
-				onChange={async () => {
-					await documentChangeThrottle()
-				}}
-				onReady={e => {
-					documentRef.current = e
-				}}
+				onChange={async () => await documentChangeThrottle()}
+				onReady={e => documentRef.current = e}
 			/>
 		)
 
@@ -177,17 +179,20 @@ export default function UserDocument() {
 		navigate('/dashboard')
 	}
 
-	function ShareButton() {
+	const ShareButton = memo(() => {
 		const [canSend, setCanSend] = useState(null)
+		const [removeUser, setRemoveUser] = useState({
+			open: false,
+			user: {
+				username: null,
+				i: NaN,
+			}
+		})
 
 		const shareRef = useRef(null)
 
 		const openModal = () => setShareModalOpen(true)
 		const closeModal = () => setShareModalOpen(false)
-
-		useEffect(() => {
-			console.log(shareRef.current?.value)
-		}, [shareRef.current?.value])
 
 		const shareDocument = async () => {
 			const response = await post.to('/doc/share').send({
@@ -198,8 +203,33 @@ export default function UserDocument() {
 			})
 
 			if (response.ok) {
-				setDocument({ ...document, guests: document.guests.concat(response.json) })
+				pushNotification(`Shared document with ${shareRef.current.value}`, { clear: true })
 				setShareModalOpen(false)
+				setDocument({ ...document, guests: document.guests.concat(response.json) })
+			} else {
+				pushNotification(response.json?.name ?? 'Could not share document', {
+					variant: 'error'
+				})
+			}
+		}
+
+		const closeConfirm = () => setRemoveUser({ ...removeUser, open: false })
+
+		const removeGuest = async () => {
+			const result = await post.to('/doc/deshare').send({
+				userId: user?.accountId,
+				sessionId: user?.sessionId,
+				documentId: params?.id,
+				guestUsername: removeUser.user.username
+			}, ['ok'])
+
+			if (result.ok) {
+				document.guests.splice(removeUser.user.i, 1) // remove from UI
+				setDocument({ ...document })                 // push UI change
+
+				pushNotification(`Removed '${removeUser.user.username}'`)
+			} else {
+				pushNotification('Error removing user', { variant: 'error' })
 			}
 		}
 
@@ -215,15 +245,51 @@ export default function UserDocument() {
 					<DialogContentText sx={{ margin: '1rem' }}>
 						The account associated with this username will be able to see this document&apos;s content.
 					</DialogContentText>
+					<DialogContentText sx={{ margin: '1rem' }}>
+						Current Guests:
+					</DialogContentText>
+
+					{(!!document?.guests && document.guests.length > 0) ? (
+						<DialogContent sx={{ maxHeight: '10rem', paddingTop: 0, paddingBottom: 0 }}>
+							<List>
+								{avatarsFromGuests(document.guests).map((e, i) => (
+									<ListItem key={i}>
+										<ListItemAvatar>
+											{e}
+										</ListItemAvatar>
+										<ListItemText primary={document.guests[i].username} secondary="Guest" />
+										<ListItemSecondaryAction>
+											<Tooltip title={`Remove ${document.guests[i].username}`} placement="left">
+												<IconButton onClick={() => {
+													setRemoveUser({
+														open: true,
+														user: {
+															username: document.guests[i].username,
+															i: i,
+														}
+													})
+												}}>
+													<Delete />
+												</IconButton>
+											</Tooltip>
+										</ListItemSecondaryAction>
+									</ListItem>
+								))}
+							</List>
+						</DialogContent>
+					) : (
+						<DialogContentText sx={{ textAlign: 'center' }}><i>There&apos;s nobody! &#129431;</i></DialogContentText>
+					)}
 					<TextField
 						inputRef={shareRef}
 						sx={{ margin: '1rem' }}
 						label="Guest's Username"
 						variant="standard"
 						error={!canSend && !!shareRef.current?.value} // Not a bug (a feature for now?)
-						{...!canSend && !!shareRef.current?.value ? { helperText: 'woo' } : {}}
+						{...!canSend && !!shareRef.current?.value ? { helperText: 'Invalid account' } : {}}
 						onChange={() => {
-							if (isUsernameValid(shareRef.current.value)) {
+							const username = shareRef.current.value
+							if (isUsernameValid(username) && username !== user.username) {
 								if (!canSend) setCanSend(true)
 							} else if (canSend) {
 								setCanSend(false)
@@ -235,9 +301,29 @@ export default function UserDocument() {
 						<Button onClick={shareDocument} variant="contained" disabled={!canSend}>Share</Button>
 					</DialogActions>
 				</Dialog>
+
+				<Dialog open={removeUser.open} onClose={closeConfirm}>
+					<DialogTitle>
+						Remove Guest
+					</DialogTitle>
+					<DialogContentText sx={{ margin: '1rem', display: 'flex' }}>
+						<div style={{ marginRight: '1rem' }}>
+							{avatarFromUsername(removeUser.user.username, { tooltip: true })}
+						</div>
+						'{removeUser.user.username}' will no longer be able to view this document.
+						You can always add them back later.
+					</DialogContentText>
+					<DialogActions>
+						<Button variant="contained" onClick={closeConfirm}>Cancel</Button>
+						<Button variant="outlined" onClick={() => {
+							removeGuest()
+							closeConfirm()
+						}} color="error">Confirm</Button>
+					</DialogActions>
+				</Dialog>
 			</>
 		)
-	}
+	})
 
 	return (
 		<>
@@ -259,7 +345,20 @@ export default function UserDocument() {
 										<ShareButton />
 										<span>Document Saved @ {formatDate(lastSave, true)}</span>
 										<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
-										{document?.title} - {JSON.stringify(document?.guests)}
+										<div className="Document-tray-header-content">
+											<div>{document?.title}</div>
+											{(!!document?.guests && document.guests.length > 0) && (
+												<>
+													<div style={{ flexGrow: 1 }}></div>
+													<Typography variant="caption" className="Document-tray-guestlist">
+														Shared With:
+														<AvatarGroup sx={{ marginLeft: '1rem' }} max={4}>
+															{avatarsFromGuests(document?.guests, true)}
+														</AvatarGroup>
+													</Typography>
+												</>
+											)}
+										</div>
 									</Typography>
 									<div id="editor"></div>
 									{editor.editor}

@@ -30,7 +30,7 @@ interface Notification {
   variant?: 'success' | 'error',
 }
 
-export function pushNotification(message, settings: Notification) {
+export function pushNotification(message, settings?: Notification) {
   document.dispatchEvent(new CustomEvent('on:snackbar', {
     detail: {
       clear: settings?.clear ?? false,

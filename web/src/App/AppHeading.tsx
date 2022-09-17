@@ -42,6 +42,23 @@ export interface IAppHeading {
 	user: LocalStorageSessionInfo
 }
 
+type avatarFromUsernameConfig = {
+	key?: number,
+	tooltip?: boolean
+}
+
+export const avatarFromUsername = (username: string, config?: avatarFromUsernameConfig) => {
+	const avatar = <Avatar {...(!!config?.tooltip || config?.key === undefined) ? {} : { key: config.key }} {...stringAvatar(username)} />
+
+	if (config?.tooltip) return (
+		<Tooltip {...config?.key === undefined ? {} : { key: config.key }} title={username} arrow>
+			{avatar}
+		</Tooltip>
+	)
+
+	return avatar
+}
+
 const AppHeading: FC<IAppHeading> = (props) => {
 	const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
 	const open = Boolean(anchorEl)
@@ -68,7 +85,7 @@ const AppHeading: FC<IAppHeading> = (props) => {
 									aria-haspopup="true"
 									aria-expanded={open ? 'true' : undefined}
 								>
-									<Avatar {...stringAvatar(props.user?.username)} />
+									{avatarFromUsername(props.user?.username)}
 								</IconButton>
 							</span>
 						</Tooltip>

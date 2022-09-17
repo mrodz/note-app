@@ -64,6 +64,16 @@ $secondary-color: rgb(216, 223, 230);
 	flex-direction: column;
 }
 
+.Document-tray-header-content {
+	display: flex;
+	flex-direction: row;
+}
+
+.Document-tray-guestlist {
+	display: flex;
+	flex-direction: row;	
+}
+
 .ck.ck-editor {
 	margin-bottom: $padding;
 }

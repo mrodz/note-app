@@ -111,7 +111,6 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 	const { privilege } = await canAccessDocument({ documentId, userId }, ctx)
 
 	const canRead = privilege > 0
-	const canWrite = privilege === 2
 
 	if (privilege === 0) {
 		console.log(`user (${userId} attempted to load a document to which they lacked access`)
@@ -131,6 +130,9 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 				select: {
 					id: true,
 					username: true
+				},
+				orderBy: {
+					username: 'asc'
 				}
 			},
 			lastUpdated: canRead,
@@ -213,6 +215,70 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 	return id
 }, "Document does not exist for user")
 
+export const removeShareAccess = catchRecordNotFound(async ({ userId, sessionId, documentId, guestUsername }: ShareDocParams, ctx?: Context) => {
+	const thisUser = await validateSession(sessionId, userId, ctx)
+
+	if (!await userOwnsDocument(documentId, thisUser.id, ctx))
+		throw new CaughtApiException("Access denied")
+
+	if (!isValidUsernameLength(guestUsername) || !isValidUsernameChars(guestUsername))
+		throw new CaughtApiException("Illegal username")
+
+	const idFromGuestUsername = await (ctx?.prisma ?? prisma).user.findFirst({
+		where: {
+			username: guestUsername
+		},
+		select: {
+			id: true
+		}
+	})
+
+	if (idFromGuestUsername === null)
+		throw new CaughtApiException(`Account '${guestUsername}' does not exist`)
+
+	if (idFromGuestUsername.id === userId)
+		throw new CaughtApiException('Cannot share to yourself')
+
+	const isNotShared = await (ctx?.prisma ?? prisma).user.count({
+		where: {
+			AND: {
+				id: idFromGuestUsername.id,
+				guestDocuments: {
+					some: {
+						id: documentId
+					}
+				}
+			}
+		}
+	}) === 0
+
+	if (isNotShared)
+		throw new CaughtApiException(`Account ${guestUsername} is not a guest`)
+
+	// try {
+	await (ctx?.prisma ?? prisma).document.update({
+		where: {
+			id: documentId
+		},
+		data: {
+			guests: {
+				disconnect: {
+					id: idFromGuestUsername.id
+				}
+			}
+		},
+		select: {
+			_count: true
+		}
+	})
+
+	return {
+		username: guestUsername,
+		id: idFromGuestUsername.id
+	}
+
+}, 'Not found')
+
 export const shareDocument = catchRecordNotFound(async function ({ userId, sessionId, documentId, guestUsername }: ShareDocParams, ctx?: Context) {
 
 	const thisUser = await validateSession(sessionId, userId, ctx)
@@ -234,6 +300,22 @@ export const shareDocument = catchRecordNotFound(async function ({ userId, sessi
 
 	if (idFromGuestUsername === null)
 		throw new CaughtApiException(`Account '${guestUsername}' does not exist`)
+
+	const isAlreadyShared = await (ctx?.prisma ?? prisma).user.count({
+		where: {
+			AND: {
+				id: idFromGuestUsername.id,
+				guestDocuments: {
+					some: {
+						id: documentId
+					}
+				}
+			}
+		}
+	}) !== 0
+
+	if (isAlreadyShared)
+		throw new CaughtApiException(`Account ${guestUsername} is already a guest`)
 
 	// try {
 	await (ctx?.prisma ?? prisma).document.update({

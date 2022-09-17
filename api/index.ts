@@ -8,7 +8,7 @@ import fetch from 'node-fetch'
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
 import { loginUser, logoutUser, LoginParams, LogoutParams } from './loginUser'
-import { canAccessDocument, CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, renameDocument, shareDocument, writeDocContent, WriteDocContentParams } from './documentActions'
+import { canAccessDocument, CreateDocParams, createDocument, DeleteDocParams, deleteDocument, DocumentActionAuth, getDocument, getDocuments, removeShareAccess, renameDocument, shareDocument, writeDocContent, WriteDocContentParams } from './documentActions'
 import { Context } from './singleton'
 
 const app = express()   // create ExpressJS app
@@ -113,6 +113,7 @@ SERVER: {
 	app.post('/api/doc/write', wrapRestFunction(writeDocContent))
 	app.post('/api/doc/share', wrapRestFunction(shareDocument))
 	app.post('/api/doc/access', wrapRestFunction(canAccessDocument))
+	app.post('/api/doc/deshare', wrapRestFunction(removeShareAccess))
 	/// END Endpoints
 
 	// Hoist the app
