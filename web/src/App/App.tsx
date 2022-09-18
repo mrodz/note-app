@@ -96,9 +96,9 @@ function App() {
     <ThemeProvider theme={LoginTheme}>
       <div className="App">
         <AnimatePresence mode="sync">
-          <AppHeading locations={{
+          {/* <AppHeading locations={{
             '/dashboard': true,
-          }} location={location.pathname} user={user} />
+          }} location={location.pathname} user={user} /> */}
           <Routes location={location} key={location.pathname}>
             <Route path='*' element={<NotFound />} />
             <Route path='/' element={<Landing />} />

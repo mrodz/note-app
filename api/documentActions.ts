@@ -119,6 +119,16 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 		}
 	}
 
+	await (ctx?.prisma ?? prisma).document.update({
+		where: {
+			id: documentId
+		},
+		data: {
+			lastUpdated: new Date()
+		},
+		select: undefined
+	})
+
 	const result = await (ctx?.prisma ?? prisma).document.findFirst({
 		where: {
 			id: documentId

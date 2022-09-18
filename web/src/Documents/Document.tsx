@@ -198,15 +198,16 @@ export default function UserDocument() {
 		const closeModal = () => setShareModalOpen(false)
 
 		const shareDocument = async () => {
+			const username: string = shareRef.current.value
 			const response = await post.to('/doc/share').send({
 				userId: user.accountId,
 				documentId: params.id,
 				sessionId: user.sessionId,
-				guestUsername: shareRef.current.value
+				guestUsername: username
 			})
 
 			if (response.ok) {
-				pushNotification(`Shared document with ${shareRef.current.value}`, { clear: true })
+				pushNotification(`Shared document with ${username}`, { clear: true })
 				setShareModalOpen(false)
 				setDocument({ ...document, guests: document.guests.concat(response.json) })
 			} else {

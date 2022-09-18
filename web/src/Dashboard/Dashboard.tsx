@@ -2,6 +2,7 @@ import { forwardRef, ReactElement, useCallback, useContext, useEffect, useRef, u
 import { Context } from '../AccountContext'
 import './Dashboard.scss'
 import {
+	Autocomplete,
 	Button,
 	Card,
 	Dialog,
@@ -53,9 +54,9 @@ const blurbs = {
 	4: "Look at all this writing",
 	5: "Your documents, all in one place",
 	6: "I positively adore writing",
-	7: "Me encanta muchísmo escribir",
-	8: "Hello :)",
-	9: "Hola :)"
+	7: "Hello ✨",
+	8: "Hola ✨",
+	9: "Have a wonderful day 🙊"
 }
 
 /**
@@ -203,12 +204,16 @@ export default function Dashboard() {
 
 	const [canRename, setCanRename] = useState(false)
 
+	const [searchResultsState, setSearchResultsState] = useState([])
+
 	// react-router-dom hook
 	const navigate = useNavigate()
 
 	// references to TextFields, to get their value atomically.
 	const createDocTitleRef = useRef(null)
 	const renameDocRef = useRef(null)
+	const searchDocRef = useRef(null)
+	const searchResults = useRef([])
 
 	/**
 	 * Construct an array of notes to display the value returned from the API lookup.
@@ -307,6 +312,8 @@ export default function Dashboard() {
 		}
 
 		setDocuments({ loaded: true, list: result.json })
+		setSearchResultsState(result.json)
+		// setSearchTargets(result.json)
 	}, [user.accountId, user.sessionId])
 
 	/**
@@ -359,9 +366,6 @@ export default function Dashboard() {
 				clear: true,
 				variant: result.ok ? 'success' : 'error'
 			})
-
-			console.log(result.json);
-
 
 			// if the document was created, re-render the dashboard to include it in the list.
 			if (result.ok) {
@@ -434,10 +438,19 @@ export default function Dashboard() {
 		}
 	}
 
+	const submitSearch = (value = undefined) => {
+		console.log('5', value ?? 'no value');
+
+		if (value !== undefined)
+			value = Array.isArray(value) ? value : [value]
+
+		const filtered = value ?? documents.list.filter((doc) => doc.title.toLowerCase().includes(searchDocRef.current.value.toLowerCase()))
+		setSearchResultsState(filtered)
+	}
+
 	return (
 		<>
-			{/* <AppHeading user={user} /> */}
-			{/* <AnimatePresence mode="sync" exitBeforeEnter> */}
+			<AppHeading user={user} />
 			<motion.div
 				key="dashboard"
 				className='Dashboard'
@@ -459,12 +472,42 @@ export default function Dashboard() {
 						</Tooltip>
 					</div>
 				</div>
+				<div className="Dashboard-search-flex">
+					<div className="Dashboard-search">
+						<Autocomplete
+							freeSolo
+							disableClearable
+							selectOnFocus
+							options={documents?.list}
+							getOptionLabel={o => {
+								return o?.title
+							}}
+							onChange={(_, v, r) => {
+								if (r === 'selectOption') submitSearch(v)
+							}}
+							renderInput={(params) => (
+								<TextField
+									{...params}
+									inputRef={searchDocRef}
+									label="Search Documents"
+									variant="outlined"
+									sx={{ marginBottom: '1rem' }}
+									onChange={() => submitSearch()}
+									InputProps={{
+										...params.InputProps,
+										type: 'search',
+									}}
+								/>
+							)}
+						/>
+					</div>
+				</div>
 				{(!documents.loaded || documents?.list?.length > 0)
 					? (
 						<div className="Dashboard-notes">
 							{documentsToCards(!documents.loaded
 								? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
-								: notesFromDocuments(documents.list))
+								: notesFromDocuments(searchResultsState))
 							}
 						</div>
 					) : (
@@ -474,7 +517,6 @@ export default function Dashboard() {
 					)
 				}
 			</motion.div>
-			{/* </AnimatePresence> */}
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
 				<DialogTitle>Create Document</DialogTitle>

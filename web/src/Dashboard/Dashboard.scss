@@ -31,11 +31,23 @@ $padding: 2rem;
 .Dashboard-top {
 	display: flex;
 	flex-direction: row;
+	margin-bottom: $padding;
 }
 
 .Dashboard-Note-top {
 	display: flex;
 	flex-direction: row;
+}
+
+.Dashboard-search-flex {
+	// display: flex;
+	// flex-direction: row-reverse;
+	// place-items: right;
+}
+
+.Dashboard-search {
+	margin-top: $padding;
+	// width: 30%;
 }
 
 .Dashboard-Note-title {

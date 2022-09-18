@@ -101,19 +101,19 @@ const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
 								</IconButton>
 							</span>
 						</Tooltip>
+						<Menu
+							anchorEl={anchorEl}
+							id="account-menu"
+							open={open}
+							onClose={handleClose}
+							onClick={handleClose}
+						>
+							<div style={{ paddingTop: '1rem', paddingBottom: '1rem', paddingLeft: '2rem', paddingRight: '2rem' }}>
+								<div>Hello, <strong>@{props.user?.username}</strong></div>
+								<LogoutButton />
+							</div>
+						</Menu>
 					</motion.header>
-					<Menu
-						anchorEl={anchorEl}
-						id="account-menu"
-						open={open}
-						onClose={handleClose}
-						onClick={handleClose}
-					>
-						<div style={{ paddingTop: '1rem', paddingBottom: '1rem', paddingLeft: '2rem', paddingRight: '2rem' }}>
-							<div>Hello, <strong>@{props.user?.username}</strong></div>
-							<LogoutButton />
-						</div>
-					</Menu>
 					{/* </AnimatePresence> */}
 				</>
 			)}
