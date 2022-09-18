@@ -45,6 +45,18 @@ export interface ShareDocParams extends DocumentActionAuth, withDocId {
 	guestUsername: string
 }
 
+type GetMine = {
+	mine: boolean
+}
+
+type GetGuest = {
+	guest: boolean
+}
+
+export interface GetDocParams extends DocumentActionAuth {
+	include: GetMine | GetGuest | (GetMine & GetGuest)
+}
+
 const PRIVILEGE_LEVELS: { [level: number]: string } = {
 	0: 'NONE',
 	1: 'GUEST',
@@ -162,25 +174,58 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 	}
 }, "Not Found")
 
-export const getDocuments = catchRecordNotFound(async function ({ sessionId, userId }: DocumentActionAuth, ctx?: Context) {
+export const getDocuments = catchRecordNotFound(async function ({ sessionId, userId, include }: GetDocParams, ctx?: Context) {
 	const user = await validateSession(sessionId, userId, ctx)
 
-	return await (ctx?.prisma ?? prisma).document.findMany({
-		// take: 10,
-		where: {
-			userId: user.id
-		},
+	const selectDocument = {
 		select: {
 			id: true,
 			title: true,
 			lastUpdated: true,
 			createdAt: true,
 			preview: true
-		},
-		orderBy: {
-			lastUpdated: 'desc'
 		}
+	}
+
+	let request: Object | undefined = {}
+	let c = 0
+
+	if ('mine' in include && include.mine) request['documents'] = ++c && selectDocument
+	if ('guest' in include && include.guest) request['guestDocuments'] = ++c && selectDocument
+	if (c === 0) request = undefined
+
+	console.log('iii', JSON.stringify(include));
+
+
+	const query = await (ctx?.prisma ?? prisma).user.findFirst({
+		where: {
+			id: user.id
+		},
+		select: request
 	})
+
+	if (query === null)
+		throw new CaughtApiException('Not found')
+
+	console.log(query)
+
+	return query
+	// return await (ctx?.prisma ?? prisma).document.findMany({
+	// 	// take: 10,
+	// 	where: {
+	// 		userId: user.id
+	// 	},
+	// 	select: {
+	// 		id: true,
+	// 		title: true,
+	// 		lastUpdated: true,
+	// 		createdAt: true,
+	// 		preview: true
+	// 	},
+	// 	orderBy: {
+	// 		lastUpdated: 'desc'
+	// 	}
+	// })
 }, 'Invalid user id')
 
 function validateTitle(title: string): boolean {
@@ -193,7 +238,7 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 
 	const userIdOfSession = await validateSession(sessionId, userId, ctx)
 
-	if (!await userOwnsDocument(documentId, userId, ctx)) {
+	if (!await userOwnsDocument(documentId, userIdOfSession, ctx)) {
 		throw new CaughtApiException("Access denied")
 	}
 

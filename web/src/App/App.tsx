@@ -4,7 +4,7 @@ import NotFound from '../NotFound/NotFound'
 import Login from '../Login/Login'
 import Register from '../Register/Register'
 import './App.css'
-import { useContext, useEffect } from 'react'
+import { useContext, useEffect, useRef } from 'react'
 import { Button, createTheme, ThemeProvider } from '@mui/material'
 import { Context, LocalStorageSessionInfo } from '../AccountContext'
 import AppHeading from './AppHeading'
@@ -60,13 +60,21 @@ export const LoginTheme = createTheme({
 function App() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
+  const snackbarIds = useRef([])
+
   useEffect(() => {
     function displaySnackbar(e) {
       if (e.detail?.clear) {
         closeSnackbar()
       }
 
+      if (snackbarIds.current.length === 3) {
+        closeSnackbar(snackbarIds[0])
+        snackbarIds.current = [snackbarIds[1], snackbarIds[2]]
+      }
+
       const key = 'SNACKBAR_' + Math.random()
+      snackbarIds.current.push(key)
       enqueueSnackbar(e.detail.message, {
         variant: e.detail.variant,
         persist: e.detail.persist,
@@ -76,6 +84,7 @@ function App() {
     }
 
     function clearNotifications() {
+      snackbarIds.current = []
       closeSnackbar()
     }
 

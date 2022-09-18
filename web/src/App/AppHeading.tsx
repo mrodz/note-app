@@ -1,11 +1,19 @@
 import { Avatar, IconButton, Menu, Tooltip } from "@mui/material"
-import React, { FC } from "react"
+import React, { FC, memo } from "react"
 import { LocalStorageSessionInfo } from "../AccountContext"
 import LogoutButton from "./LogoutButton"
 import { AnimatePresence, motion } from "framer-motion"
 import { LoginTheme } from "./App"
 
-function stringToColor(string: string) {
+function stringToColor(string: string): {
+	bg: string,
+	font: string
+} {
+	if (!string) return {
+		bg: '#000',
+		font: '#fff'
+	}
+
 	let hash = 0
 	let i
 
@@ -14,22 +22,28 @@ function stringToColor(string: string) {
 		hash = string.charCodeAt(i) + ((hash << 5) - hash)
 	}
 
-	let color = '#'
+	let rgb: string[] = Array(3)
 
 	for (i = 0; i < 3; i += 1) {
-		const value = (hash >> (i * 8)) & 0xff
-		color += `00${value.toString(16)}`.slice(-2)
+		rgb[i] = `00${((hash >> (i * 8)) & 0xff).toString(16)}`.slice(-2)
 	}
+
+	console.log(rgb);
+
 	/* eslint-enable no-bitwise */
 
-	return color
+	return {
+		bg: rgb.reduce((prev, c) => prev + c, '#'),
+		font: (Number(rgb[0]) * 0.299 + Number(rgb[1]) * 0.587 + Number(rgb[2]) * 0.114) > 186 ? '#000' : '#fff'
+	}
 }
 
 function stringAvatar(name: string) {
+	const { bg, font } = stringToColor(name)
 	return {
 		sx: {
-			bgcolor: !!name ? stringToColor(name) : '#e0e0e0',
-			color: '#000'
+			bgcolor: !!name ? bg : '#e0e0e0',
+			color: font
 		},
 		children: !!name ? (name[0] + name[1]).toUpperCase() : ''
 	}
@@ -64,7 +78,7 @@ export const avatarFromUsername = (username: string, config?: avatarFromUsername
 	return avatar
 }
 
-const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
+const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = memo((props) => {
 	const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
 	const open = Boolean(anchorEl)
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -118,6 +132,6 @@ const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
 			)}
 		</>
 	)
-}
+})
 
 export default AppHeading

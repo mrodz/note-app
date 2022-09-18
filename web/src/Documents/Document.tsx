@@ -214,6 +214,7 @@ export default function UserDocument() {
 				pushNotification(response.json?.name ?? 'Could not share document', {
 					variant: 'error'
 				})
+				closeModal()
 			}
 		}
 
@@ -302,10 +303,7 @@ export default function UserDocument() {
 					/>
 					<DialogActions>
 						<Button onClick={closeModal}>Cancel</Button>
-						<Button onClick={() => {
-							shareDocument()
-							closeModal()
-						}} variant="contained" disabled={!canSend}>Share</Button>
+						<Button onClick={shareDocument} variant="contained" disabled={!canSend}>Share</Button>
 					</DialogActions>
 				</Dialog>
 
@@ -369,7 +367,7 @@ export default function UserDocument() {
 													</Typography>
 												)}
 												<Typography variant="caption" className="Document-tray-guestlist">
-													{document?.privilege === 2 ? <>Shared With:</> : <>Other Guests:</>}
+													{document?.privilege === 2 ? <>Shared With:</> : <>Guests:</>}
 													<AvatarGroup sx={{ marginLeft: '1rem' }} max={4}>
 														{avatarsFromGuests(document?.guests, true)}
 													</AvatarGroup>

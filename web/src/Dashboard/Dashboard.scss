@@ -47,7 +47,12 @@ $padding: 2rem;
 
 .Dashboard-search {
 	margin-top: $padding;
-	// width: 30%;
+	display: flex;
+}
+
+.Dashboard-search-bar {
+	display: grid;
+	place-items: center;
 }
 
 .Dashboard-Note-title {

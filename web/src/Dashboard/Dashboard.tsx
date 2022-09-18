@@ -5,12 +5,15 @@ import {
 	Autocomplete,
 	Button,
 	Card,
+	Checkbox,
 	Dialog,
 	DialogActions,
 	DialogContent,
 	DialogContentText,
 	DialogTitle,
 	Divider,
+	FormControlLabel,
+	FormGroup,
 	IconButton,
 	List,
 	ListItem,
@@ -34,6 +37,7 @@ import { useNavigate } from 'react-router'
 import { post, pushNotification } from '../App/App'
 import sanitizeHtml from 'sanitize-html'
 import AppHeading from '../App/AppHeading'
+import { OneKkRounded, RemoveRedEye } from '@mui/icons-material'
 
 /**
  * Greets a user according to the time of day.
@@ -133,7 +137,7 @@ export const Transition = forwardRef(function Transition(
  * @returns the argument passed
  */
 const l = function <T>(arg0: T): T { // eslint-disable-line
-	console.trace(arg0)
+	console.log(arg0)
 	return arg0
 }
 
@@ -146,7 +150,7 @@ export function formatDate(lastUpdated: Date, precise: boolean = false) {
 	 * @returns a string of length two to present a given number.
 	 */
 	function fixMinutes(n: number) {
-		if (n > 10) return n
+		if (n > 9) return n
 		return '0' + n
 	}
 
@@ -204,7 +208,10 @@ export default function Dashboard() {
 
 	const [canRename, setCanRename] = useState(false)
 
-	const [searchResultsState, setSearchResultsState] = useState([])
+	const [documentsLoaded, setDocumentsLoaded] = useState({
+		mine: true,
+		guest: false
+	})
 
 	// react-router-dom hook
 	const navigate = useNavigate()
@@ -213,7 +220,9 @@ export default function Dashboard() {
 	const createDocTitleRef = useRef(null)
 	const renameDocRef = useRef(null)
 	const searchDocRef = useRef(null)
-	const searchResults = useRef([])
+	const originalDocuments = useRef([])
+
+	const highlightGuests = documentsLoaded.guest && documentsLoaded.mine
 
 	/**
 	 * Construct an array of notes to display the value returned from the API lookup.
@@ -230,7 +239,6 @@ export default function Dashboard() {
 			 * the specified id. Will always succeed in this context.
 			 */
 			function openDocument() {
-
 				pushNotification(`Opening '${e.title}'`, {
 					variant: 'success',
 					clear: true
@@ -251,8 +259,10 @@ export default function Dashboard() {
 				openSettings(e)
 			}
 
+			const isGuest = '__GUEST__' in e
+
 			return (
-				<ListItem className='Dashboard-Note-clickable' sx={{ padding: 0 }} button onClick={openDocument}>
+				<ListItem className='Dashboard-Note-clickable' sx={{ padding: 0, ...(isGuest && highlightGuests) ? { backgroundColor: '#bee6e8' } : {} }} button onClick={openDocument}>
 					<div className="Dashboard-Note">
 						<div className='Dashboard-Note-top'>
 							<div>
@@ -263,11 +273,18 @@ export default function Dashboard() {
 							</div>
 							<div style={{ flexGrow: 1 }}></div>
 							<div>
-								<Tooltip title="More" enterDelay={1000}>
-									<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
-										<MoreVertIcon />
-									</IconButton>
-								</Tooltip>
+								{!isGuest ? (
+									<Tooltip title="More" enterDelay={1000}>
+										<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
+											<MoreVertIcon />
+										</IconButton>
+									</Tooltip>
+								) : (
+									<Tooltip title="You can only view this document" enterDelay={1000}>
+										<RemoveRedEye />
+									</Tooltip>
+								)
+								}
 							</div>
 						</div>
 						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
@@ -291,16 +308,62 @@ export default function Dashboard() {
 		})
 	}
 
+	const submitSearch = (value: undefined | {
+		data: string | string[],
+		search: boolean
+	} = undefined) => {
+		let data
+		let filtered
+
+		const predicate = doc => doc.title.toLowerCase().includes(searchDocRef.current?.value.toLowerCase())
+
+		if (value !== undefined) {
+			data = Array.isArray(value.data) ? value.data : [value.data]
+			if (value.search) {
+				filtered = data.filter(predicate)
+			} else {
+				filtered = data
+			}
+		} else {
+			filtered = (searchDocRef.current?.value?.length > 0
+				? originalDocuments.current.filter(predicate)
+				: originalDocuments.current)
+		}
+
+		setDocuments({
+			loaded: true,
+			list: filtered
+		})
+		// setSearchResultsState(filtered)
+	}
+
+	type loadDocInclude = {
+		mine: boolean,
+		guest: boolean
+	}
+
 	/**
 	 * Memoized asynchronous function to request a user's documents.
 	 * Called once on page load, and sets `documents`' state.
 	 */
-	const requestDocuments = useCallback(async function () {
+	const requestDocuments = useCallback(async function (include: loadDocInclude = { mine: true, guest: false }) {
+		setDocuments({ loaded: false, list: [] })
+
+		if (!include.guest && !include.mine) {
+			originalDocuments.current = []
+			submitSearch({
+				data: [],
+				search: false
+			})
+			return
+		}
+
 		// basic post request.
 		/** @todo - timeout and try again. */
 		const result = await post.to('/doc/all').send({
 			sessionId: user.sessionId,
-			userId: user.accountId
+			userId: user.accountId,
+			include: include
 		})
 
 		if (!result.ok) {
@@ -311,8 +374,22 @@ export default function Dashboard() {
 			return
 		}
 
-		setDocuments({ loaded: true, list: result.json })
-		setSearchResultsState(result.json)
+		// const len = result.json?.documents?.length ?? 0 + result.json?.guestDocuments?.length ?? 0
+		const mine: Array<any> = result.json?.documents ?? []
+		const guest: Array<any> = result.json?.guestDocuments ?? []
+		const joined = mine.concat(guest)
+
+		for (let i = 0; i < guest.length; i++) {
+			guest[i]['__GUEST__'] = true
+		}
+
+		console.log(`<init> {${joined.map(d => d.title)}`);
+		// setDocuments({ loaded: true, list: joined })
+		originalDocuments.current = joined
+		submitSearch({
+			data: joined,
+			search: true
+		})
 		// setSearchTargets(result.json)
 	}, [user.accountId, user.sessionId])
 
@@ -339,7 +416,7 @@ export default function Dashboard() {
 		setMessages({ greeting: getGreeting(), blurb: getBlurb() });
 
 		(async () => {
-			await requestDocuments()
+			await requestDocuments(documentsLoaded)
 		})()
 	}, [requestDocuments])
 
@@ -408,11 +485,15 @@ export default function Dashboard() {
 
 		if (result.ok) {
 			// re-render the dashboard to include the renamed document.
-			await requestDocuments()
+			await requestDocuments(documentsLoaded)
 			// close the modal.
 			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
 		}
 	}, [renameDocRef, settingsOpen, requestDocuments, user.accountId, user.sessionId])
+
+	// useEffect(() => {
+	// 	console.log(documents.list);
+	// }, [documents.list])
 
 	/**
 	 * Callback function to delete a document.
@@ -431,19 +512,22 @@ export default function Dashboard() {
 				clear: true
 			})
 
-			if (result.ok) await requestDocuments()
+			if (result.ok) await requestDocuments(documentsLoaded)
 		} finally {
 			setConfirmDelete(false) // close confirmation modal
 			setSettingsOpen({ open: false, document: null }) // close settings modal
 		}
 	}
 
-	const submitSearch = (value = undefined) => {
-		if (value !== undefined)
-			value = Array.isArray(value) ? value : [value]
+	const hasNoDocuments = (originalDocuments.current.length === 0 && (documentsLoaded.guest || documentsLoaded.mine))
+	const noneSelected = !(documentsLoaded.guest || documentsLoaded.mine)
 
-		const filtered = value ?? documents.list.filter((doc) => doc.title.toLowerCase().includes(searchDocRef.current.value.toLowerCase()))
-		setSearchResultsState(filtered)
+	const getNoDocumentsMessage = () => {
+		let message: string = '';
+		let and: boolean = false
+		if (documentsLoaded.guest && (and = true)) message += "No one has shared a document with you"
+		if (documentsLoaded.mine) message += `${and ? ' / ' : ''}You don't have have any documents yet`
+		return message
 	}
 
 	return (
@@ -470,54 +554,90 @@ export default function Dashboard() {
 						</Tooltip>
 					</div>
 				</div>
-				{documents?.list?.length > 0 && <div className="Dashboard-search-flex">
-					<div className="Dashboard-search">
-						<Autocomplete
-							freeSolo
-							disableClearable
-							selectOnFocus
-							options={documents?.list}
-							getOptionLabel={o => {
-								return o.title
-							}}
-							onChange={(_, v, r) => {
-								if (r === 'selectOption') submitSearch(v)
-							}}
-							renderInput={(params) => (
-								<TextField
-									{...params}
-									inputRef={searchDocRef}
-									label="Search Documents"
-									variant="outlined"
-									sx={{ marginBottom: '1rem' }}
-									onChange={() => submitSearch()}
-									InputProps={{
-										...params.InputProps,
-										type: 'search',
-									}}
-								/>
-							)}
-						/>
-					</div>
-				</div>}
-				{(!documents.loaded || documents?.list?.length > 0) ? (
-					searchResultsState?.length > 0 ? (
-						<div className="Dashboard-notes">
-							{documentsToCards(!documents.loaded
-								? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
-								: notesFromDocuments(searchResultsState))
-							}
+				{/* {((() => { console.log(documents?.list?.length > 0); return documents?.list?.length > 0 })() || (!documentsLoaded.guest && !documentsLoaded.mine)) ? ( */}
+				<>
+					<div className="Dashboard-search-flex">
+						<div className="Dashboard-search">
+							<Autocomplete
+								className='Dashboard-search-bar'
+								freeSolo
+								disableClearable
+								selectOnFocus
+								options={documents?.list ?? []}
+								sx={{ flexGrow: 1, display: 'flex' }}
+								getOptionLabel={o => {
+									// console.log(o);
+
+									return o.title
+								}}
+								onChange={(_, v, r) => {
+									if (r === 'selectOption') submitSearch({
+										data: v,
+										search: true
+									})
+								}}
+								renderInput={(params) => (
+									<TextField
+										{...params}
+										sx={{
+											display: 'grid',
+											placeItems: 'center',
+											marginRight: '5rem',
+											flexGrow: 1
+										}}
+										inputRef={searchDocRef}
+										label="Search Documents"
+										variant="outlined"
+										onChange={() => submitSearch()}
+										InputProps={{
+											...params.InputProps,
+											type: 'search',
+										}}
+									/>
+								)}
+							/>
+							<FormGroup>
+								<Typography>Include:</Typography>
+								<FormControlLabel control={<Checkbox defaultChecked onClick={async () => {
+									const newFilter = { ...documentsLoaded, mine: !documentsLoaded.mine }
+									setDocumentsLoaded(newFilter)
+									await requestDocuments(newFilter)
+								}} />} label="Your documents" />
+								<FormControlLabel control={<Checkbox onClick={async () => {
+									const newFilter = { ...documentsLoaded, guest: !documentsLoaded.guest }
+									setDocumentsLoaded(newFilter)
+									await requestDocuments(newFilter)
+								}} />} label="Not your documents" />
+							</FormGroup>
 						</div>
-					) : (
-						documents.loaded && <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-							No documents matching: "{searchDocRef.current?.value}"
-						</Typography>
-					)
-				) : (
-					<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-						You don&apos;t have have any documents yet!
-					</Typography>
-				)}
+					</div>
+					{
+						documents.list?.length > 0 ? (
+							<div className="Dashboard-notes">
+								{documentsToCards(!documents.loaded
+									? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
+									: notesFromDocuments(documents.list))
+								}
+							</div>
+						) : documents.loaded && (
+							hasNoDocuments ? (
+								<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+									{getNoDocumentsMessage()}
+								</Typography>
+							) : (
+								(documents.loaded) && <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+									{noneSelected ? <>
+										Check one of the boxes above to load documents
+									</> : (<>
+										No documents matching: "{searchDocRef.current?.value}"
+									</>)}
+								</Typography>
+							)
+						)
+					}
+				</>
+				{/* ) : ( */}
+				{/* )} */}
 			</motion.div>
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
