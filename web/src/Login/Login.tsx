@@ -15,7 +15,7 @@ import { useNavigate } from "react-router"
 import { Context } from "../AccountContext"
 import { ThrottledCallback } from "../App"
 import { areUsernameAndPasswordValid } from "../Register/Register"
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import './Login.scss'
 import { Link } from "react-router-dom"
 import { Visibility, VisibilityOff } from "@mui/icons-material"
@@ -123,57 +123,57 @@ export default function Login() {
 	}, [navigate, user?.sessionId, user?.username])
 
 	return (
-		<AnimatePresence>
-			<motion.div
-				key="login"
-				className="Login-root"
-				initial={{ width: 0 }}
-				animate={{ width: 'inherit' }}
-				exit={{ x: window.innerWidth }}
-			>
-				<div className="-super-Login-Card">
-					<Card className="Login-Card">
-						<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
-						<FormControl sx={{ width: '100%' }}>
-							<div className="Login-usernameform">
-								<TextField label="Username" inputRef={usernameRef}
-									helperText="Enter your username"
-									color="secondary" onChange={_ => setUsername(usernameRef.current.value)}
-								/>
-							</div>
-							<div className="Login-passwordform">
-								<TextField label="Password" inputRef={passwordRef}
-									helperText={"Enter your password"} type={passwordVisible ? "text" : "password"}
-									color="secondary" onChange={_ => setPassword(passwordRef.current.value)}
-									InputProps={{
-										endAdornment: (
-											<IconButton onClick={hidePassword}>
-												{passwordVisible ? <Visibility /> : <VisibilityOff />}
-											</IconButton>
-										)
-									}}
-								/>
-							</div>
-						</FormControl>
-						<Button
-							disabled={username === '' || password === ''}
-							{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
-							onClick={() => loginButton.current.call(count, username, password)}>
-							Sign In
-						</Button>
-						<Divider sx={{ marginBottom: '1.3rem' }}>
-							<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
-						</Divider>
-						<div className="Login-signuppanel">
-							<Tooltip title="Sign up today!" placement="bottom" arrow>
-								<Link to="/register" style={{ textDecoration: 'none', margin: 'auto' }}>
-									<Chip icon={<ArrowForwardIosIcon />} clickable label="Create One!" color="primary"></Chip>
-								</Link>
-							</Tooltip>
+		// <AnimatePresence mode="sync" exitBeforeEnter>
+		<motion.div
+			key="login"
+			className="Login-root"
+			initial={{ width: 0 }}
+			animate={{ width: 'inherit' }}
+			exit={{ x: window.innerWidth * 2 }}
+		>
+			<div className="-super-Login-Card">
+				<Card className="Login-Card">
+					<Typography variant="h4" color="primary" mb="1rem">Sign In &mdash;</Typography>
+					<FormControl sx={{ width: '100%' }}>
+						<div className="Login-usernameform">
+							<TextField label="Username" inputRef={usernameRef}
+								helperText="Enter your username"
+								color="secondary" onChange={_ => setUsername(usernameRef.current.value)}
+							/>
 						</div>
-					</Card>
-				</div>
-			</motion.div >
-		</AnimatePresence>
+						<div className="Login-passwordform">
+							<TextField label="Password" inputRef={passwordRef}
+								helperText={"Enter your password"} type={passwordVisible ? "text" : "password"}
+								color="secondary" onChange={_ => setPassword(passwordRef.current.value)}
+								InputProps={{
+									endAdornment: (
+										<IconButton onClick={hidePassword}>
+											{passwordVisible ? <Visibility /> : <VisibilityOff />}
+										</IconButton>
+									)
+								}}
+							/>
+						</div>
+					</FormControl>
+					<Button
+						disabled={username === '' || password === ''}
+						{...loading ? { loading: "true" } : {}} variant="contained" sx={{ width: '100%', marginBottom: '2rem' }}
+						onClick={() => loginButton.current.call(count, username, password)}>
+						Sign In
+					</Button>
+					<Divider sx={{ marginBottom: '1.3rem' }}>
+						<Typography variant="caption" mr=".5rem">Don&apos;t have an account?</Typography>
+					</Divider>
+					<div className="Login-signuppanel">
+						<Tooltip title="Sign up today!" placement="bottom" arrow>
+							<Link to="/register" style={{ textDecoration: 'none', margin: 'auto' }}>
+								<Chip icon={<ArrowForwardIosIcon />} clickable label="Create One!" color="primary"></Chip>
+							</Link>
+						</Tooltip>
+					</div>
+				</Card>
+			</div>
+		</motion.div >
+		// </AnimatePresence>
 	)
 }

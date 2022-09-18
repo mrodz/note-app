@@ -29,7 +29,7 @@ import { memo } from "react"
 import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
 import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon, Delete } from "@mui/icons-material"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 import { isUsernameValid } from "../Register/Register"
 import { avatarFromUsername } from "../App/AppHeading"
 
@@ -63,26 +63,44 @@ export default function UserDocument() {
 	const [editor, setEditor] = useState({
 		editor: null
 	})
+	const [loading, setLoading] = useState(true)
 
 	const params = useParams()
 	const navigate = useNavigate()
 
 	const documentRef = useRef(null)
 
-	const requirePrivilege = (privilegeLevel: number, cb: (...args: any[]) => any, not?: (...args: any) => any) => {
-		if (document?.privilege >= privilegeLevel) return cb
-		return not ?? (() => { })
-	}
-
-	const getActionVerb = requirePrivilege(2, () => "Editing", () => "Viewing")
-
-	const loadDoc = async () => {
+	const loadDoc = useCallback(async () => {
 		return await post.to('/doc/get').send({
 			documentId: params.id,
 			sessionId: user.sessionId,
 			userId: user.accountId,
 		})
-	}
+	}, [params.id, user.accountId, user.sessionId])
+
+	/// BIG ERRROR:
+	/// Access Denied page renders thousands of times
+	useEffect(() => {
+		if (loading) {
+			(async () => {
+				const result = await loadDoc()
+
+				if (result.ok) {
+					setDocument(result.json)
+					setLastSave(new Date(result.json.lastUpdated))
+					globalThis.document.title = `${result.json.privilege === 2 ? 'Editing' : 'Viewing'} '${result.json.title}'`
+				} else {
+					pushNotification(result.json?.name ?? 'Could not load document', {
+						variant: 'error'
+					})
+				}
+
+				setLoading(false)
+			})()
+		}
+	}, [loading, loadDoc])
+
+	const timeoutRef = useRef(null)
 
 	useEffect(() => {
 		if (!user?.sessionId) {
@@ -90,30 +108,14 @@ export default function UserDocument() {
 			return
 		}
 
-		(async () => {
-			const result = await loadDoc()
-
-			if (result.ok) {
-				setDocument(result.json)
-				setLastSave(new Date(result.json.lastUpdated))
-				globalThis.document.title = `${getActionVerb()} '${result.json.title}'`
-			} else {
-				pushNotification(result.json?.name ?? 'Could not load document', {
-					variant: 'error'
-				})
-			}
-		})()
-	}, [user?.accountId, user?.sessionId, params?.id, navigate])
-
-	const timeoutRef = useRef(null)
-
-	useEffect(() => {
 		return () => {
 			clearTimeout(timeoutRef.current)
 		}
-	}, [])
+	}, [navigate, params.id, user?.sessionId])
 
-	const documentChange = requirePrivilege(2, useCallback(async () => {
+	const documentChange = useCallback(async () => {
+		if (document?.privilege !== 2) return
+
 		const result = await post.to('/doc/write').send({
 			documentId: params.id,
 			sessionId: user.sessionId,
@@ -129,7 +131,7 @@ export default function UserDocument() {
 		} else {
 			setLastSave(new Date())
 		}
-	}, [params.id, user?.accountId, user?.sessionId]))
+	}, [document?.privilege, params.id, user?.accountId, user?.sessionId])
 
 	useEffect(() => {
 		return () => {
@@ -141,7 +143,9 @@ export default function UserDocument() {
 
 	const test = useRef(0)
 
-	const documentChangeThrottle = requirePrivilege(2, useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
+	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
+		if (document?.privilege !== 2) return
+
 		const waiting = throttlePause
 
 		test.current += 1
@@ -156,8 +160,7 @@ export default function UserDocument() {
 			test.current = 0
 			setThrottlePause(false)
 		}, 10_000)
-	}, [documentChange, throttlePause]))
-
+	}, [documentChange, throttlePause])
 
 	useEffect(() => {
 		const editor = (
@@ -298,7 +301,10 @@ export default function UserDocument() {
 					/>
 					<DialogActions>
 						<Button onClick={closeModal}>Cancel</Button>
-						<Button onClick={shareDocument} variant="contained" disabled={!canSend}>Share</Button>
+						<Button onClick={() => {
+							shareDocument()
+							closeModal()
+						}} variant="contained" disabled={!canSend}>Share</Button>
 					</DialogActions>
 				</Dialog>
 
@@ -328,45 +334,44 @@ export default function UserDocument() {
 	return (
 		<>
 			{user?.sessionId ? (
-				<AnimatePresence>{
-					(document?.privilege !== 0) ? (
-						<div className="Document" key="document">
-							<div className="Document-tray">
-								<motion.div
-									className="Document-tray-main"
-									initial={{ width: 0 }}
-									animate={{ width: 'inherit' }}
-									exit={{ x: window.innerWidth }}
-								>
-									<Typography mb="1rem" variant="h4" className="Document-tray-header">
-										<Button variant="outlined" onClick={dashboardClick}>
-											<ArrowBackIosNew sx={{ marginRight: '1rem' }} /> DASHBOARD
-										</Button>
-										<ShareButton />
-										<span>Document Saved @ {formatDate(lastSave, true)}</span>
-										<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
-										<div className="Document-tray-header-content">
-											<div>{document?.title}</div>
-											{(!!document?.guests && document.guests.length > 0) && (
-												<>
-													<div style={{ flexGrow: 1 }}></div>
-													<Typography variant="caption" className="Document-tray-guestlist">
-														Shared With:
-														<AvatarGroup sx={{ marginLeft: '1rem' }} max={4}>
-															{avatarsFromGuests(document?.guests, true)}
-														</AvatarGroup>
-													</Typography>
-												</>
-											)}
-										</div>
-									</Typography>
-									<div id="editor"></div>
-									{editor.editor}
-								</motion.div>
+				(document?.privilege !== 0) ? (
+					<motion.div
+						className="Document"
+						key="document"
+						initial={{ filter: 'blur(1rem)' }}
+						animate={{ filter: 'blur(0)' }}
+						exit={{ x: window.innerWidth * 2 }}
+					>
+						<div className="Document-tray">
+							<div className="Document-tray-main">
+								<Typography mb="1rem" variant="h4" className="Document-tray-header">
+									<Button variant="outlined" onClick={dashboardClick}>
+										<ArrowBackIosNew sx={{ marginRight: '1rem' }} /> DASHBOARD
+									</Button>
+									<ShareButton />
+									<span>Document Saved @ {formatDate(lastSave, true)}</span>
+									<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }} />
+									<div className="Document-tray-header-content">
+										<div>{document?.title}</div>
+										{(!!document?.guests && document.guests.length > 0) && (
+											<>
+												<div style={{ flexGrow: 1 }}></div>
+												<Typography variant="caption" className="Document-tray-guestlist">
+													Shared With:
+													<AvatarGroup sx={{ marginLeft: '1rem' }} max={4}>
+														{avatarsFromGuests(document?.guests, true)}
+													</AvatarGroup>
+												</Typography>
+											</>
+										)}
+									</div>
+								</Typography>
+								<div id="editor"></div>
+								{editor.editor}
 							</div>
 						</div>
-					) : <AccessDenied />
-				} </AnimatePresence>
+					</motion.div>
+				) : <AccessDenied />
 			) : "Please sign in."}
 		</>
 	)

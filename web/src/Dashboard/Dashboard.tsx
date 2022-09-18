@@ -32,6 +32,7 @@ import { TransitionProps } from '@mui/material/transitions'
 import { useNavigate } from 'react-router'
 import { post, pushNotification } from '../App/App'
 import sanitizeHtml from 'sanitize-html'
+import AppHeading from '../App/AppHeading'
 
 /**
  * Greets a user according to the time of day.
@@ -198,7 +199,9 @@ export default function Dashboard() {
 	const [confirmDelete, setConfirmDelete] = useState(false)
 
 	// the new document title, stateful value to force repaints on text update.
-	const [settingsRenameText, setSettingsRenameText] = useState('')
+	// const [settingsRenameText, setSettingsRenameText] = useState('')
+
+	const [canRename, setCanRename] = useState(false)
 
 	// react-router-dom hook
 	const navigate = useNavigate()
@@ -312,7 +315,7 @@ export default function Dashboard() {
 	 */
 	const openSettings = (e) => {
 		setSettingsOpen({ open: true, document: e })
-		setSettingsRenameText(e.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''))
+		// setSettingsRenameText(e.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''))
 	}
 
 	/**
@@ -356,6 +359,9 @@ export default function Dashboard() {
 				clear: true,
 				variant: result.ok ? 'success' : 'error'
 			})
+
+			console.log(result.json);
+
 
 			// if the document was created, re-render the dashboard to include it in the list.
 			if (result.ok) {
@@ -430,44 +436,45 @@ export default function Dashboard() {
 
 	return (
 		<>
-			<AnimatePresence>
-				<motion.div
-					key="dashboard"
-					className='Dashboard'
-					initial={{ width: 0 }}
-					animate={{ width: 'inherit' }}
-					exit={{ x: window.innerWidth }}
-				>
-					<div className="Dashboard-top">
-						<div>
-							<Typography variant="h3">{messages.greeting}, {user?.username}!</Typography>
-							<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
-						</div>
-						<div style={{ flexGrow: 1 }}></div>
-						<div className='Dashboard-top-createdocument'>
-							<Tooltip title="Create document">
-								<IconButton id="create-document" onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
-									<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
-								</IconButton>
-							</Tooltip>
-						</div>
+			{/* <AppHeading user={user} /> */}
+			{/* <AnimatePresence mode="sync" exitBeforeEnter> */}
+			<motion.div
+				key="dashboard"
+				className='Dashboard'
+				initial={{ width: 0 }}
+				animate={{ width: 'inherit' }}
+				exit={{ x: window.innerWidth * 2 }}
+			>
+				<div className="Dashboard-top">
+					<div>
+						<Typography variant="h3">{messages.greeting}, {user?.username}!</Typography>
+						<Typography variant="h6" mt="1rem" ml="1rem"><AlarmOnIcon sx={{ marginRight: '1rem' }} />{messages.blurb}</Typography>
 					</div>
-					{(!documents.loaded || documents?.list?.length > 0)
-						? (
-							<div className="Dashboard-notes">
-								{documentsToCards(!documents.loaded
-									? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
-									: notesFromDocuments(documents.list))
-								}
-							</div>
-						) : (
-							<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-								You don&apos;t have have any documents yet!
-							</Typography>
-						)
-					}
-				</motion.div>
-			</AnimatePresence>
+					<div style={{ flexGrow: 1 }}></div>
+					<div className='Dashboard-top-createdocument'>
+						<Tooltip title="Create document">
+							<IconButton id="create-document" onClick={(e) => { e.preventDefault(); setOpenCreateDoc(true) }}>
+								<AddCircleIcon color="primary" sx={{ width: '4rem', height: '4rem' }} />
+							</IconButton>
+						</Tooltip>
+					</div>
+				</div>
+				{(!documents.loaded || documents?.list?.length > 0)
+					? (
+						<div className="Dashboard-notes">
+							{documentsToCards(!documents.loaded
+								? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
+								: notesFromDocuments(documents.list))
+							}
+						</div>
+					) : (
+						<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+							You don&apos;t have have any documents yet!
+						</Typography>
+					)
+				}
+			</motion.div>
+			{/* </AnimatePresence> */}
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
 				<DialogTitle>Create Document</DialogTitle>
@@ -505,7 +512,7 @@ export default function Dashboard() {
 
 					<ListItem>
 						<ListItemText>
-							Last Opened: {settingsOpen.document?.lastUpdated}
+							Last Edit: {settingsOpen.document?.lastUpdated}
 						</ListItemText>
 					</ListItem>
 
@@ -529,14 +536,23 @@ export default function Dashboard() {
 						<TextField
 							inputRef={renameDocRef} autoFocus variant="standard"
 							defaultValue={settingsOpen.document?.title}
-							onChange={() => setSettingsRenameText(renameDocRef.current.value)}
+							onChange={() => {
+								const text = renameDocRef.current.value
+
+								// possible improvement: lazy evaluation could speed this up
+								const goodLength = text.length !== 0,
+									titlesUnique = text.replace(/^\s+|\s+$|\s(?=\s)/gi, '') !== settingsOpen.document?.title,
+									nonWhiteSpace = !/^\s+$/g.test(text)
+
+								if (goodLength && titlesUnique && nonWhiteSpace) {
+									if (!canRename) setCanRename(true)
+								} else {
+									if (canRename) setCanRename(false)
+								}
+							}}
 						/>
 						<Button
-							disabled={
-								settingsRenameText.length === 0 ||
-								settingsRenameText.replace(/^\s+|\s+$|\s(?=\s)/gi, '') === settingsOpen.document?.title ||
-								/^\s+$/.test(settingsRenameText)
-							}
+							disabled={!canRename}
 							variant="contained"
 							sx={{ marginLeft: '1rem' }}
 							onClick={renameButton}>Rename</Button>

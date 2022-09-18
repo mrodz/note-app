@@ -13,6 +13,7 @@ import UserDocument from '../Documents/Document'
 import Post from '../postRequest'
 import { useSnackbar } from 'notistack'
 import { TOS } from '../Register/TOS'
+import { AnimatePresence } from 'framer-motion'
 
 export const post = Post.config({
   baseURL: 'http://localhost:5000/api',
@@ -45,6 +46,17 @@ export function clearNotifications() {
   document.dispatchEvent(new Event('on:snackbar-clear'))
 }
 
+export const LoginTheme = createTheme({
+  palette: {
+    primary: {
+      main: '#d68018'
+    },
+    secondary: {
+      main: '#3b3740'
+    }
+  }
+})
+
 function App() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
@@ -76,17 +88,6 @@ function App() {
     }
   }, [enqueueSnackbar, closeSnackbar])
 
-  const LoginTheme = createTheme({
-    palette: {
-      primary: {
-        main: '#d68018'
-      },
-      secondary: {
-        main: '#3b3740'
-      }
-    }
-  })
-
   // find a more efficient way to do this.
   const user = useContext<LocalStorageSessionInfo>(Context)
   const location = useLocation()
@@ -94,18 +95,20 @@ function App() {
   return (
     <ThemeProvider theme={LoginTheme}>
       <div className="App">
-        <AppHeading locations={{
-          '/dashboard': true,
-        }} location={location.pathname} user={user} bgColor={LoginTheme.palette.primary.main} />
-        <Routes location={location} key={location.pathname}>
-          <Route path='*' element={<NotFound />} />
-          <Route path='/' element={<Landing />} />
-          <Route path='/login' element={<Login />} />
-          <Route path='/register' element={<Register />} />
-          <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
-          <Route path='/d/:id' element={<UserDocument />} />
-          <Route path='/tos' element={<TOS />} />
-        </Routes>
+        <AnimatePresence mode="sync">
+          <AppHeading locations={{
+            '/dashboard': true,
+          }} location={location.pathname} user={user} />
+          <Routes location={location} key={location.pathname}>
+            <Route path='*' element={<NotFound />} />
+            <Route path='/' element={<Landing />} />
+            <Route path='/login' element={<Login />} />
+            <Route path='/register' element={<Register />} />
+            <Route path='/dashboard' element={user?.sessionId ? <Dashboard /> : <Navigate replace to="/login" />} />
+            <Route path='/d/:id' element={<UserDocument />} />
+            <Route path='/tos' element={<TOS />} />
+          </Routes>
+        </AnimatePresence>
       </div>
     </ThemeProvider>
   )

@@ -2,6 +2,8 @@ import { Avatar, IconButton, Menu, Tooltip } from "@mui/material"
 import React, { FC } from "react"
 import { LocalStorageSessionInfo } from "../AccountContext"
 import LogoutButton from "./LogoutButton"
+import { AnimatePresence, motion } from "framer-motion"
+import { LoginTheme } from "./App"
 
 function stringToColor(string: string) {
 	let hash = 0
@@ -33,12 +35,14 @@ function stringAvatar(name: string) {
 	}
 }
 
-export interface IAppHeading {
+interface IAppHeadingWithLocations extends IAppHeading {
 	location: string,
 	locations: {
 		[pathname: string]: boolean
 	},
-	bgColor: string,
+}
+
+export interface IAppHeading {
 	user: LocalStorageSessionInfo
 }
 
@@ -51,7 +55,7 @@ export const avatarFromUsername = (username: string, config?: avatarFromUsername
 	const avatar = <Avatar {...(!!config?.tooltip || config?.key === undefined) ? {} : { key: config.key }} {...stringAvatar(username)} />
 
 	if (config?.tooltip) return (
-		<Tooltip {...config?.key === undefined ? {} : { key: config.key }} title={username} arrow>
+		<Tooltip {...config?.key === undefined ? {} : { key: config.key }} title={username ?? 'username'} arrow>
 			{avatar}
 		</Tooltip>
 	)
@@ -59,7 +63,7 @@ export const avatarFromUsername = (username: string, config?: avatarFromUsername
 	return avatar
 }
 
-const AppHeading: FC<IAppHeading> = (props) => {
+const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
 	const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
 	const open = Boolean(anchorEl)
 	const handleClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -71,9 +75,17 @@ const AppHeading: FC<IAppHeading> = (props) => {
 
 	return (
 		<>
-			{props?.location in props?.locations && (
+			{(!('location' in props) || (props?.location in props?.locations)) && (
 				<>
-					<header className='App-header' style={{ backgroundColor: props.bgColor }}>
+					{/* <AnimatePresence initial={false} mode="sync" exitBeforeEnter> */}
+					<motion.header
+						className='App-header'
+						style={{ backgroundColor: LoginTheme.palette.primary.main }}
+						key="app-header"
+						initial={{ transform: 'translateY(0px)' }}
+						animate={{ transform: 'translateY(0px)' }}
+						exit={{ transform: 'translateY(-100px)' }}
+					>
 						<Tooltip title="Account settings">
 							<span>
 								<IconButton
@@ -89,7 +101,7 @@ const AppHeading: FC<IAppHeading> = (props) => {
 								</IconButton>
 							</span>
 						</Tooltip>
-					</header>
+					</motion.header>
 					<Menu
 						anchorEl={anchorEl}
 						id="account-menu"
@@ -102,6 +114,7 @@ const AppHeading: FC<IAppHeading> = (props) => {
 							<LogoutButton />
 						</div>
 					</Menu>
+					{/* </AnimatePresence> */}
 				</>
 			)}
 		</>
