@@ -10,6 +10,11 @@ $secondary-color: rgb(216, 223, 230);
 	flex-direction: column;
 	height: 100%;
 	width: 100%;
+
+	& > * > .MuiAlert-icon {
+		display: grid;
+		place-items: center;
+	}
 }
 
 .Document-tray {

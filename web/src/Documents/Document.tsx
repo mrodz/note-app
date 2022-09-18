@@ -28,7 +28,7 @@ import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
-import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon, Delete } from "@mui/icons-material"
+import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon, Delete, Info, InfoOutlined, InfoRounded, InfoTwoTone } from "@mui/icons-material"
 import { motion } from "framer-motion"
 import { isUsernameValid } from "../Register/Register"
 import { avatarFromUsername } from "../App/AppHeading"
@@ -343,7 +343,12 @@ export default function UserDocument() {
 						animate={{ filter: 'blur(0)' }}
 						exit={{ x: window.innerWidth * 2 }}
 					>
-						{document?.privilege === 1 && <Alert severity="info">You can view this document&apos;s content, but not edit it.</Alert>}
+						{document?.privilege === 1 && <Alert severity="info">
+							You can view this document&apos;s content, but not edit it.
+							<Button color="info" sx={{ marginLeft: '1rem' }} onClick={() => window.location.reload()}>
+								Refresh Content
+							</Button>
+						</Alert>}
 						<div className="Document-tray">
 							<div className="Document-tray-main">
 								<Typography mb="1rem" variant="h4" className="Document-tray-header">
@@ -382,7 +387,8 @@ export default function UserDocument() {
 						</div>
 					</motion.div>
 				) : <AccessDenied />
-			) : "Please sign in."}
+			) : "Please sign in."
+			}
 		</>
 	)
 }
