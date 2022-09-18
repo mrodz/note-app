@@ -258,7 +258,7 @@ export default function Dashboard() {
 							<div>
 								<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
 								<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-									<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>{/*<BeenhereIcon sx={{ width: '1rem' }} />*/}
+									<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>
 								</div>
 							</div>
 							<div style={{ flexGrow: 1 }}></div>
@@ -369,7 +369,7 @@ export default function Dashboard() {
 
 			// if the document was created, re-render the dashboard to include it in the list.
 			if (result.ok) {
-				navigate(`/d/${result.json.id}`)
+				navigate(`/d/${result.json.documentId}`)
 			}
 		} finally {
 			setOpenCreateDoc(false) // close the menu regardless.
@@ -439,8 +439,6 @@ export default function Dashboard() {
 	}
 
 	const submitSearch = (value = undefined) => {
-		console.log('5', value ?? 'no value');
-
 		if (value !== undefined)
 			value = Array.isArray(value) ? value : [value]
 
@@ -472,7 +470,7 @@ export default function Dashboard() {
 						</Tooltip>
 					</div>
 				</div>
-				<div className="Dashboard-search-flex">
+				{documents?.list?.length > 0 && <div className="Dashboard-search-flex">
 					<div className="Dashboard-search">
 						<Autocomplete
 							freeSolo
@@ -480,7 +478,7 @@ export default function Dashboard() {
 							selectOnFocus
 							options={documents?.list}
 							getOptionLabel={o => {
-								return o?.title
+								return o.title
 							}}
 							onChange={(_, v, r) => {
 								if (r === 'selectOption') submitSearch(v)
@@ -501,9 +499,9 @@ export default function Dashboard() {
 							)}
 						/>
 					</div>
-				</div>
-				{(!documents.loaded || documents?.list?.length > 0)
-					? (
+				</div>}
+				{(!documents.loaded || documents?.list?.length > 0) ? (
+					searchResultsState?.length > 0 ? (
 						<div className="Dashboard-notes">
 							{documentsToCards(!documents.loaded
 								? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
@@ -511,11 +509,15 @@ export default function Dashboard() {
 							}
 						</div>
 					) : (
-						<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-							You don&apos;t have have any documents yet!
+						documents.loaded && <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+							No documents matching: "{searchDocRef.current?.value}"
 						</Typography>
 					)
-				}
+				) : (
+					<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+						You don&apos;t have have any documents yet!
+					</Typography>
+				)}
 			</motion.div>
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>

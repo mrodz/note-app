@@ -1,4 +1,5 @@
 import {
+	Alert,
 	AvatarGroup,
 	Button,
 	Dialog,
@@ -22,7 +23,6 @@ import { useNavigate, useParams } from "react-router"
 import { Context } from "../AccountContext"
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import Editor from 'ckeditor5-custom-build/build/ckeditor'
-
 import "./Document.scss"
 import { Link } from "react-router-dom"
 import { memo } from "react"
@@ -121,10 +121,10 @@ export default function UserDocument() {
 			sessionId: user.sessionId,
 			userId: user.accountId,
 			newContent: documentRef.current.getData()
-		}, ['ok'])
+		}, ['ok', 'json'])
 
 		if (!result.ok) {
-			pushNotification('Could not sync your data', {
+			pushNotification(`Could not sync your data (${result.json?.name ?? 'unknown error'})`, {
 				variant: 'error',
 				persist: true
 			})
@@ -313,13 +313,15 @@ export default function UserDocument() {
 					<DialogTitle>
 						Remove Guest
 					</DialogTitle>
-					<DialogContentText sx={{ margin: '1rem', display: 'flex' }}>
-						<div style={{ marginRight: '1rem' }}>
+					<DialogContent sx={{ display: 'flex' }}>
+						<div style={{ marginRight: '1rem', display: 'grid', placeItems: 'center' }}>
 							{avatarFromUsername(removeUser.user.username, { tooltip: true })}
 						</div>
-						'{removeUser.user.username}' will no longer be able to view this document.
-						You can always add them back later.
-					</DialogContentText>
+						<DialogContentText sx={{ margin: '1rem', display: 'flex' }}>
+							'{removeUser.user.username}' will no longer be able to view this document.
+							You can always add them back later.
+						</DialogContentText>
+					</DialogContent>
 					<DialogActions>
 						<Button variant="contained" onClick={closeConfirm}>Cancel</Button>
 						<Button variant="outlined" onClick={() => {
@@ -343,6 +345,7 @@ export default function UserDocument() {
 						animate={{ filter: 'blur(0)' }}
 						exit={{ x: window.innerWidth * 2 }}
 					>
+						{document?.privilege === 1 && <Alert severity="info">You can view this document&apos;s content, but not edit it.</Alert>}
 						<div className="Document-tray">
 							<div className="Document-tray-main">
 								<Typography mb="1rem" variant="h4" className="Document-tray-header">
@@ -357,8 +360,16 @@ export default function UserDocument() {
 										{(!!document?.guests && document.guests.length > 0) && (
 											<>
 												<div style={{ flexGrow: 1 }}></div>
+												{document?.privilege === 1 && (
+													<Typography variant="caption" className="Document-tray-guestlist">
+														Owner:
+														<div style={{ marginLeft: '1rem' }}>
+															{avatarFromUsername(document?.User.username, { tooltip: true })}
+														</div>
+													</Typography>
+												)}
 												<Typography variant="caption" className="Document-tray-guestlist">
-													Shared With:
+													{document?.privilege === 2 ? <>Shared With:</> : <>Other Guests:</>}
 													<AvatarGroup sx={{ marginLeft: '1rem' }} max={4}>
 														{avatarsFromGuests(document?.guests, true)}
 													</AvatarGroup>

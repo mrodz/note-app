@@ -386,11 +386,13 @@ export const deleteDocument = catchRecordNotFound(async function ({ sessionId, u
 }, 'Document does not exist for user')
 
 export const writeDocContent = catchRecordNotFound(async function ({ sessionId, userId, documentId, newContent }: WriteDocContentParams, ctx?: Context) {
+	if (newContent.length >= 16382)
+		throw new CaughtApiException("file too big")
+
 	const user = await validateSession(sessionId, userId, ctx)
 
-	if (!await userOwnsDocument(documentId, user.id, ctx)) {
+	if (!await userOwnsDocument(documentId, user.id, ctx))
 		throw new CaughtApiException("Access denied")
-	}
 
 	const id = await (ctx?.prisma ?? prisma).document.update({
 		where: {

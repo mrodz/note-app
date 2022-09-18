@@ -48,14 +48,15 @@ export interface IAppHeading {
 
 type avatarFromUsernameConfig = {
 	key?: number,
-	tooltip?: boolean
+	tooltip?: boolean,
+	style?: React.CSSProperties
 }
 
 export const avatarFromUsername = (username: string, config?: avatarFromUsernameConfig) => {
 	const avatar = <Avatar {...(!!config?.tooltip || config?.key === undefined) ? {} : { key: config.key }} {...stringAvatar(username)} />
 
 	if (config?.tooltip) return (
-		<Tooltip {...config?.key === undefined ? {} : { key: config.key }} title={username ?? 'username'} arrow>
+		<Tooltip style={config?.style ?? {}} {...config?.key === undefined ? {} : { key: config.key }} title={username ?? 'username'} arrow>
 			{avatar}
 		</Tooltip>
 	)
@@ -77,7 +78,6 @@ const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
 		<>
 			{(!('location' in props) || (props?.location in props?.locations)) && (
 				<>
-					{/* <AnimatePresence initial={false} mode="sync" exitBeforeEnter> */}
 					<motion.header
 						className='App-header'
 						style={{ backgroundColor: LoginTheme.palette.primary.main }}
@@ -114,7 +114,6 @@ const AppHeading: FC<IAppHeading | IAppHeadingWithLocations> = (props) => {
 							</div>
 						</Menu>
 					</motion.header>
-					{/* </AnimatePresence> */}
 				</>
 			)}
 		</>
