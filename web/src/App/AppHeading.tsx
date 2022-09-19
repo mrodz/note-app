@@ -28,8 +28,6 @@ function stringToColor(string: string): {
 		rgb[i] = `00${((hash >> (i * 8)) & 0xff).toString(16)}`.slice(-2)
 	}
 
-	console.log(rgb);
-
 	/* eslint-enable no-bitwise */
 
 	return {

@@ -24,7 +24,7 @@ model User {
 model Session {
   id             String @id @unique @default(uuid())
   userId         String @unique
-  User           User   @relation(fields: [userId], references: [id])
+  User           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeSessions Int    @default(0)
 }
 
@@ -36,6 +36,6 @@ model Document {
   createdAt   DateTime @default(now())
   lastUpdated DateTime @default(now())
   userId      String
-  User        User     @relation("owner", fields: [userId], references: [id])
+  User        User     @relation("owner", fields: [userId], references: [id], onDelete: Cascade)
   guests      User[]   @relation("guest")
 }

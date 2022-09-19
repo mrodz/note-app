@@ -1,5 +1,5 @@
-import { forwardRef, ReactElement, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Context } from '../AccountContext'
+import { forwardRef, MutableRefObject, ReactElement, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { Context, LocalStorageSessionInfo } from '../AccountContext'
 import './Dashboard.scss'
 import {
 	Autocomplete,
@@ -28,16 +28,16 @@ import {
 import AlarmOnIcon from '@mui/icons-material/AlarmOn'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline'
 import CloseIcon from '@mui/icons-material/Close'
 import AddCircleIcon from '@mui/icons-material/AddCircle'
 import { TransitionProps } from '@mui/material/transitions'
-import { useNavigate } from 'react-router'
+import { NavigateFunction, useNavigate } from 'react-router'
 import { post, pushNotification } from '../App/App'
 import sanitizeHtml from 'sanitize-html'
 import AppHeading from '../App/AppHeading'
-import { OneKkRounded, RemoveRedEye } from '@mui/icons-material'
+import { RemoveRedEye } from '@mui/icons-material'
 
 /**
  * Greets a user according to the time of day.
@@ -166,14 +166,65 @@ export function formatDate(lastUpdated: Date, precise: boolean = false) {
 	 * If this date was today (chronologically), return a timestamp to 
 	 * the minute (HH:mm AM/PM). Otherwise, return the date (MM/DD/YYYY)
 	 */
-	// const lastUpdatedString = (() => {
 	if (lastUpdated.getUTCDate() !== today.getUTCDate())
 		return `${lastUpdated.getMonth() + 1}/${lastUpdated.getDate()}/${lastUpdated.getFullYear()}`
 
 	const hours = fixHours(lastUpdated.getHours())
 	const seconds = precise ? `:${fixMinutes(lastUpdated.getSeconds())}` : ''
 	return `${hours > 12 ? hours - 12 : hours}:${fixMinutes(lastUpdated.getMinutes())}${seconds} ${hours < 12 ? "AM" : "PM"}`
-	// })()
+}
+
+/// START @framer-motion animations - for document cards
+const list = {
+	visible: {
+		transition: {
+			type: "spring",
+			bounce: 0,
+			duration: 0.7,
+			delayChildren: 0.3,
+			staggerChildren: 0.05
+		}
+	},
+	hidden: {
+		transition: {
+			type: "spring",
+			bounce: 0,
+			duration: 0.3
+		}
+	}
+}
+
+const item = {
+	visible: { opacity: 1, x: 0 },
+	hidden: { opacity: 0, x: -100 },
+}
+/// END @framer-motion animations
+
+export type User = {
+	id: string,
+	username: string,
+	password: string,
+	createdAt: Date,
+	documents: Document[],
+	guestDocuments: Document[],
+	documentCount: number,
+}
+
+export type Session = {
+	id: string,
+	userId: string,
+	activeSessions: number
+}
+
+export type Document = {
+	id: string,
+	title: string,
+	preview?: string,
+	content: string,
+	createdAt: Date,
+	lastUpdated: Date,
+	userId: string
+	guests: User[]
 }
 
 /**
@@ -181,48 +232,68 @@ export function formatDate(lastUpdated: Date, precise: boolean = false) {
  * - The amount of skeleton documents shown during loading
  *   is only calculated on user sign in, and does not reflect
  *   changes created during this session.
- * - close modal on bg click for create doc
  * 
  * @returns JSX for the main dashboard component.
  */
 export default function Dashboard() {
-	const user = useContext(Context)
+	type LoadDocInclude = {
+		mine: boolean,
+		guest: boolean
+	}
+
+	type SetSettingsOpen = {
+		open: boolean,
+		document: Document
+	}
+
+	type SetDocuments = {
+		loaded: boolean,
+		list: Document[]
+	}
+
+	type SetMessages = {
+		greeting: string,
+		blurb: string
+	}
+
+	const user: LocalStorageSessionInfo = useContext(Context)
 
 	// used to save a message for the lifetime of the component.
-	const [messages, setMessages] = useState({ greeting: '', blurb: '' })
+	const [messages, setMessages] = useState<SetMessages>({ greeting: '', blurb: '' })
 
 	// {<done loading>, <documents>}
-	const [documents, setDocuments] = useState({ loaded: false, list: [] })
+	const [documents, setDocuments] = useState<SetDocuments>({ loaded: false, list: [] })
 
 	// toggle the create document menu
-	const [openCreateDoc, setOpenCreateDoc] = useState(false)
+	const [openCreateDoc, setOpenCreateDoc] = useState<boolean>(false)
 
 	// {<settings menu open>, <the document being examined>}
-	const [settingsOpen, setSettingsOpen] = useState({ open: false, document: null })
+	const [settingsOpen, setSettingsOpen] = useState<SetSettingsOpen>({ open: false, document: null })
 
 	// toggle the confirm delete menu
-	const [confirmDelete, setConfirmDelete] = useState(false)
+	const [confirmDelete, setConfirmDelete] = useState<boolean>(false)
 
-	// the new document title, stateful value to force repaints on text update.
-	// const [settingsRenameText, setSettingsRenameText] = useState('')
+	// whether the user can rename a document or not. Used in the rename modal.
+	const [canRename, setCanRename] = useState<boolean>(false)
 
-	const [canRename, setCanRename] = useState(false)
-
-	const [documentsLoaded, setDocumentsLoaded] = useState({
+	// which types of documents can the user load
+	const [documentsLoaded, setDocumentsLoaded] = useState<LoadDocInclude>({
 		mine: true,
 		guest: false
 	})
 
 	// react-router-dom hook
-	const navigate = useNavigate()
+	const navigate: NavigateFunction = useNavigate()
 
 	// references to TextFields, to get their value atomically.
-	const createDocTitleRef = useRef(null)
-	const renameDocRef = useRef(null)
-	const searchDocRef = useRef(null)
-	const originalDocuments = useRef([])
+	const createDocTitleRef: MutableRefObject<HTMLInputElement> = useRef(null)
+	const renameDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
+	const searchDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
+	const originalDocuments: MutableRefObject<Document[]> = useRef([])
 
-	const highlightGuests = documentsLoaded.guest && documentsLoaded.mine
+	// make it easier to spot other people's documents when
+	// viewing guest documents along with your own
+	const highlightGuests: boolean = documentsLoaded.guest && documentsLoaded.mine
 
 	/**
 	 * Construct an array of notes to display the value returned from the API lookup.
@@ -230,9 +301,9 @@ export default function Dashboard() {
 	 * @param navigate legacy 
 	 * @returns 
 	 */
-	function notesFromDocuments(documents) {
+	function notesFromDocuments(documents: Document[]): JSX.Element[] {
 		return documents?.map?.(e => {
-			const lastUpdated = formatDate(new Date(e.lastUpdated))
+			const lastUpdated: string = formatDate(new Date(e.lastUpdated))
 
 			/**
 			 * Callback function for a click on a note; navigates to the document with
@@ -262,91 +333,114 @@ export default function Dashboard() {
 			const isGuest = '__GUEST__' in e
 
 			return (
-				<ListItem className='Dashboard-Note-clickable' sx={{ padding: 0, ...(isGuest && highlightGuests) ? { backgroundColor: '#bee6e8' } : {} }} button onClick={openDocument}>
-					<div className="Dashboard-Note">
-						<div className='Dashboard-Note-top'>
-							<div>
-								<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
-								<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-									<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>
+				<motion.div
+					key={e.id}
+					className='Dashboard-Note-clickable'
+					variants={item}
+				>
+					<ListItem sx={{ padding: 0, height: '100%', ...(isGuest && highlightGuests) ? { backgroundColor: '#bee6e8' } : {} }} button onClick={openDocument}>
+						<div className="Dashboard-Note">
+							<div className='Dashboard-Note-top'>
+								<div>
+									<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
+									<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+										<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>
+									</div>
+								</div>
+								<div style={{ flexGrow: 1 }}></div>
+								<div>
+									{!isGuest ? (
+										<Tooltip title="More" enterDelay={1000}>
+											<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
+												<MoreVertIcon />
+											</IconButton>
+										</Tooltip>
+									) : (
+										<Tooltip title="You can only view this document" enterDelay={1000}>
+											<RemoveRedEye />
+										</Tooltip>
+									)
+									}
 								</div>
 							</div>
-							<div style={{ flexGrow: 1 }}></div>
-							<div>
-								{!isGuest ? (
-									<Tooltip title="More" enterDelay={1000}>
-										<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
-											<MoreVertIcon />
-										</IconButton>
-									</Tooltip>
-								) : (
-									<Tooltip title="You can only view this document" enterDelay={1000}>
-										<RemoveRedEye />
-									</Tooltip>
-								)
-								}
-							</div>
-						</div>
-						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-						<Tooltip title="Preview" placement="top" enterDelay={1000}>
-							<div className="Dashboard-Note-preview">
-								<Typography variant="caption" mr="1rem">
-									<span dangerouslySetInnerHTML={{
-										__html: e.preview === null || /^\s*$/.test(e.preview)
-											? "<i>Empty Document</i>"
-											: trimString(sanitizeHtml(e.preview, {
-												allowedTags: ['b', 'i', 'strong', 'u', 'br', 'p'],
-											}))
-									}} />
-								</Typography>
-							</div>
-						</Tooltip>
+							<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
+							<Tooltip title="Preview" placement="top" enterDelay={1000}>
+								<div className="Dashboard-Note-preview">
+									<Typography variant="caption" mr="1rem">
+										<span dangerouslySetInnerHTML={{
+											__html: e.preview === null || /^\s*$/.test(e.preview)
+												? "<i>Empty Document</i>"
+												: trimString(sanitizeHtml(e.preview, {
+													allowedTags: ['b', 'i', 'strong', 'u', 'br', 'p'],
+												}))
+										}} />
+									</Typography>
+								</div>
+							</Tooltip>
 
-					</div>
-				</ListItem>
+						</div>
+					</ListItem>
+				</motion.div>
 			)
 		})
 	}
 
-	const submitSearch = (value: undefined | {
-		data: string | string[],
+	type SubmitSearchProps = {
+		/**
+		 * Data to serve as a replacement from the original documents' titles.
+		 */
+		data: Document | Document[],
+		/**
+		 * Whether or not to apply the predicate
+		 */
 		search: boolean
-	} = undefined) => {
-		let data
-		let filtered
+	}
+
+	/**
+	 * ### This function:
+	 * - Searches the documents obtained from the last POST request to '/api/doc/all'
+	 *   - Filters for those whose title includes the search text
+	 *   - Save the result as the documents rendered to the screen 
+	 * 
+	 * ### Default predicate:
+	 * ```js
+	 * function predicate(doc) {
+	 * 	let title = doc.title.toLowerCase()
+	 * 	let search = searchDocRef.current?.value.toLowerCase()
+	 * 
+	 * 	return title.includes(search)
+	 * }
+	 * ```
+	 * 
+	 * @param value Optionally, pass in an object of type {@link SubmitSearchProps}
+	 * for special filtering.
+	 */
+	const submitSearch = (value: undefined | SubmitSearchProps = undefined) => {
+		let filtered: Document[]
 
 		const predicate = doc => doc.title.toLowerCase().includes(searchDocRef.current?.value.toLowerCase())
 
 		if (value !== undefined) {
-			data = Array.isArray(value.data) ? value.data : [value.data]
-			if (value.search) {
-				filtered = data.filter(predicate)
-			} else {
-				filtered = data
-			}
+			let data = Array.isArray(value.data) ? value.data : [value.data]
+			filtered = value.search ? data.filter(predicate) : data
 		} else {
 			filtered = (searchDocRef.current?.value?.length > 0
 				? originalDocuments.current.filter(predicate)
 				: originalDocuments.current)
 		}
 
+		// repaint
 		setDocuments({
 			loaded: true,
 			list: filtered
 		})
-		// setSearchResultsState(filtered)
-	}
-
-	type loadDocInclude = {
-		mine: boolean,
-		guest: boolean
 	}
 
 	/**
 	 * Memoized asynchronous function to request a user's documents.
 	 * Called once on page load, and sets `documents`' state.
 	 */
-	const requestDocuments = useCallback(async function (include: loadDocInclude = { mine: true, guest: false }) {
+	const requestDocuments = useCallback(async function (include: LoadDocInclude = { mine: true, guest: false }) {
 		setDocuments({ loaded: false, list: [] })
 
 		if (!include.guest && !include.mine) {
@@ -359,7 +453,6 @@ export default function Dashboard() {
 		}
 
 		// basic post request.
-		/** @todo - timeout and try again. */
 		const result = await post.to('/doc/all').send({
 			sessionId: user.sessionId,
 			userId: user.accountId,
@@ -374,23 +467,20 @@ export default function Dashboard() {
 			return
 		}
 
-		// const len = result.json?.documents?.length ?? 0 + result.json?.guestDocuments?.length ?? 0
-		const mine: Array<any> = result.json?.documents ?? []
-		const guest: Array<any> = result.json?.guestDocuments ?? []
-		const joined = mine.concat(guest)
+		const mine: Document[] = result.json?.documents ?? []
+		const guest: Document[] = result.json?.guestDocuments ?? []
+		const joined: Document[] = mine.concat(guest)
 
 		for (let i = 0; i < guest.length; i++) {
 			guest[i]['__GUEST__'] = true
 		}
 
-		console.log(`<init> {${joined.map(d => d.title)}`);
-		// setDocuments({ loaded: true, list: joined })
 		originalDocuments.current = joined
+
 		submitSearch({
 			data: joined,
 			search: true
 		})
-		// setSearchTargets(result.json)
 	}, [user.accountId, user.sessionId])
 
 	/**
@@ -399,7 +489,6 @@ export default function Dashboard() {
 	 */
 	const openSettings = (e) => {
 		setSettingsOpen({ open: true, document: e })
-		// setSettingsRenameText(e.title.replace(/^\s+|\s+$|\s(?=\s)/gi, ''))
 	}
 
 	/**
@@ -471,10 +560,10 @@ export default function Dashboard() {
 		/// END checks
 
 		const result = await post.to('/doc/rename').send({
-			documentId: settingsOpen?.document.id,
 			sessionId: user.sessionId,
 			userId: user.accountId,
-			title: renameDocRef.current.value
+			title: renameDocRef.current.value,
+			documentId: settingsOpen?.document.id
 		})
 
 		pushNotification(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
@@ -490,10 +579,6 @@ export default function Dashboard() {
 			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
 		}
 	}, [renameDocRef, settingsOpen, requestDocuments, user.accountId, user.sessionId])
-
-	// useEffect(() => {
-	// 	console.log(documents.list);
-	// }, [documents.list])
 
 	/**
 	 * Callback function to delete a document.
@@ -519,14 +604,18 @@ export default function Dashboard() {
 		}
 	}
 
-	const hasNoDocuments = (originalDocuments.current.length === 0 && (documentsLoaded.guest || documentsLoaded.mine))
-	const noneSelected = !(documentsLoaded.guest || documentsLoaded.mine)
+	const hasNoDocuments: boolean = (originalDocuments.current.length === 0 && (documentsLoaded.guest || documentsLoaded.mine))
+	const noneSelected: boolean = !(documentsLoaded.guest || documentsLoaded.mine)
 
-	const getNoDocumentsMessage = () => {
+	const getNoDocumentsMessage: () => string = () => {
 		let message: string = '';
-		let and: boolean = false
-		if (documentsLoaded.guest && (and = true)) message += "No one has shared a document with you"
-		if (documentsLoaded.mine) message += `${and ? ' / ' : ''}You don't have have any documents yet`
+		let and: string = '' // delimeter for two reasons
+
+		// message for part 1 (will also add set delimeter if applicable)
+		if (documentsLoaded.guest && (and = '/')) message += "No one has shared a document with you"
+		// message for part 2
+		if (documentsLoaded.mine) message += `${and}You don't have have any documents yet`
+
 		return message
 	}
 
@@ -554,7 +643,6 @@ export default function Dashboard() {
 						</Tooltip>
 					</div>
 				</div>
-				{/* {((() => { console.log(documents?.list?.length > 0); return documents?.list?.length > 0 })() || (!documentsLoaded.guest && !documentsLoaded.mine)) ? ( */}
 				<>
 					<div className="Dashboard-search-flex">
 						<div className="Dashboard-search">
@@ -565,16 +653,16 @@ export default function Dashboard() {
 								selectOnFocus
 								options={documents?.list ?? []}
 								sx={{ flexGrow: 1, display: 'flex' }}
-								getOptionLabel={o => {
-									// console.log(o);
-
-									return o.title
-								}}
+								getOptionLabel={o => typeof o === 'string' ? o : o.title}
 								onChange={(_, v, r) => {
-									if (r === 'selectOption') submitSearch({
-										data: v,
-										search: true
-									})
+									// this code will fire if the user clicks
+									// an Autocomplete option from the list.
+									if (r === 'selectOption' && typeof v !== 'string') {
+										submitSearch({
+											data: v as Document,
+											search: true
+										})
+									}
 								}}
 								renderInput={(params) => (
 									<TextField
@@ -598,46 +686,87 @@ export default function Dashboard() {
 							/>
 							<FormGroup>
 								<Typography>Include:</Typography>
-								<FormControlLabel control={<Checkbox defaultChecked onClick={async () => {
-									const newFilter = { ...documentsLoaded, mine: !documentsLoaded.mine }
-									setDocumentsLoaded(newFilter)
-									await requestDocuments(newFilter)
-								}} />} label="Your documents" />
-								<FormControlLabel control={<Checkbox onClick={async () => {
-									const newFilter = { ...documentsLoaded, guest: !documentsLoaded.guest }
-									setDocumentsLoaded(newFilter)
-									await requestDocuments(newFilter)
-								}} />} label="Not your documents" />
+								<Tooltip enterDelay={1000} title="These are documents you've created">
+									<FormControlLabel control={<Checkbox defaultChecked onClick={async () => {
+										// Include user's own documents in the collection
+										documentsLoaded.mine = !documentsLoaded.mine
+										setDocumentsLoaded(documentsLoaded)
+										await requestDocuments(documentsLoaded)
+									}} />} label="Your documents" />
+								</Tooltip>
+								<Tooltip enterDelay={1000} title="These are documents others have shared with you">
+									<FormControlLabel control={<Checkbox onClick={async () => {
+										// Include guest documents in the collection
+										documentsLoaded.guest = !documentsLoaded.guest
+										setDocumentsLoaded(documentsLoaded)
+										await requestDocuments(documentsLoaded)
+									}} />} label="Other documents" />
+								</Tooltip>
 							</FormGroup>
 						</div>
 					</div>
 					{
 						documents.list?.length > 0 ? (
-							<div className="Dashboard-notes">
+							<motion.div
+								className="Dashboard-notes"
+								initial="hidden"
+								animate="visible"
+								variants={list}
+							>
 								{documentsToCards(!documents.loaded
 									? Array(Number(user?.documentCount)).map((_, i) => <Note key={i} />)
 									: notesFromDocuments(documents.list))
 								}
-							</div>
+							</motion.div>
 						) : documents.loaded && (
-							hasNoDocuments ? (
-								<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-									{getNoDocumentsMessage()}
-								</Typography>
-							) : (
-								(documents.loaded) && <Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
-									{noneSelected ? <>
-										Check one of the boxes above to load documents
-									</> : (<>
-										No documents matching: "{searchDocRef.current?.value}"
-									</>)}
-								</Typography>
-							)
+							<>
+								{hasNoDocuments ? (
+									<motion.div
+										initial={{
+											y: 100,
+										}}
+										transition={{
+											delay: .3,
+											type: 'spring',
+											bounce: .5
+										}}
+										animate={{
+											y: 0,
+										}}
+									>
+										<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+											{getNoDocumentsMessage()}
+										</Typography>
+									</motion.div>
+								) : (
+									(documents.loaded) && (
+										<motion.div
+											initial={{
+												y: 100,
+											}}
+											transition={{
+												delay: .3,
+												type: 'spring',
+												bounce: .5
+											}}
+											animate={{
+												y: 0,
+											}}
+										>
+											<Typography variant="h6" mt="5rem" sx={{ textAlign: 'center' }}>
+												{noneSelected ? <>
+													Check one of the boxes above to load documents
+												</> : (<>
+													No documents matching: "{searchDocRef.current?.value}"
+												</>)}
+											</Typography>
+										</motion.div>
+									)
+								)}
+							</>
 						)
 					}
 				</>
-				{/* ) : ( */}
-				{/* )} */}
 			</motion.div>
 
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
@@ -676,13 +805,13 @@ export default function Dashboard() {
 
 					<ListItem>
 						<ListItemText>
-							Last Edit: {settingsOpen.document?.lastUpdated}
+							Last Edit: {settingsOpen.document?.lastUpdated?.toUTCString?.()}
 						</ListItemText>
 					</ListItem>
 
 					<ListItem>
 						<ListItemText>
-							Created At: {settingsOpen.document?.createdAt}
+							Created At: {settingsOpen.document?.createdAt?.toUTCString?.()}
 						</ListItemText>
 					</ListItem>
 

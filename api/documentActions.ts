@@ -131,15 +131,17 @@ export const getDocument = catchRecordNotFound(async function ({ sessionId, user
 		}
 	}
 
-	await (ctx?.prisma ?? prisma).document.update({
-		where: {
-			id: documentId
-		},
-		data: {
-			lastUpdated: new Date()
-		},
-		select: undefined
-	})
+	if (privilege === 2) {
+		await (ctx?.prisma ?? prisma).document.update({
+			where: {
+				id: documentId
+			},
+			data: {
+				lastUpdated: new Date()
+			},
+			select: undefined
+		})
+	}
 
 	const result = await (ctx?.prisma ?? prisma).document.findFirst({
 		where: {
@@ -184,6 +186,9 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 			lastUpdated: true,
 			createdAt: true,
 			preview: true
+		},
+		orderBy: {
+			lastUpdated: 'desc'
 		}
 	}
 
@@ -194,38 +199,17 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 	if ('guest' in include && include.guest) request['guestDocuments'] = ++c && selectDocument
 	if (c === 0) request = undefined
 
-	console.log('iii', JSON.stringify(include));
-
-
 	const query = await (ctx?.prisma ?? prisma).user.findFirst({
 		where: {
 			id: user.id
 		},
-		select: request
+		select: request,
 	})
 
 	if (query === null)
 		throw new CaughtApiException('Not found')
 
-	console.log(query)
-
 	return query
-	// return await (ctx?.prisma ?? prisma).document.findMany({
-	// 	// take: 10,
-	// 	where: {
-	// 		userId: user.id
-	// 	},
-	// 	select: {
-	// 		id: true,
-	// 		title: true,
-	// 		lastUpdated: true,
-	// 		createdAt: true,
-	// 		preview: true
-	// 	},
-	// 	orderBy: {
-	// 		lastUpdated: 'desc'
-	// 	}
-	// })
 }, 'Invalid user id')
 
 function validateTitle(title: string): boolean {
@@ -236,22 +220,30 @@ export const renameDocument = catchRecordNotFound(async function ({ sessionId, u
 	if (!validateTitle(title))
 		throw new CaughtApiException("Invalid title")
 
-	const userIdOfSession = await validateSession(sessionId, userId, ctx)
+	const userOfSession = await validateSession(sessionId, userId, ctx)
 
-	if (!await userOwnsDocument(documentId, userIdOfSession, ctx)) {
+	if (!await userOwnsDocument(documentId, userOfSession.id, ctx)) {
 		throw new CaughtApiException("Access denied")
 	}
 
+	// const count = await (ctx?.prisma ?? prisma).document.count({
+	// 	where: {
+
+	// 		title: title
+	// 	}
+	// })
+
 	const count = await (ctx?.prisma ?? prisma).document.count({
 		where: {
-			title: title
+			AND: {
+				userId: userOfSession.id,
+				title: title
+			}
 		}
 	})
 
 	if (count !== 0)
 		throw new CaughtApiException("A document with this title already exists!")
-
-	console.log('#', documentId)
 
 	const id = await (ctx?.prisma ?? prisma).document.update({
 		where: {
@@ -372,7 +364,6 @@ export const shareDocument = catchRecordNotFound(async function ({ userId, sessi
 	if (isAlreadyShared)
 		throw new CaughtApiException(`Account ${guestUsername} is already a guest`)
 
-	// try {
 	await (ctx?.prisma ?? prisma).document.update({
 		where: {
 			id: documentId
@@ -393,10 +384,6 @@ export const shareDocument = catchRecordNotFound(async function ({ userId, sessi
 		username: guestUsername,
 		id: idFromGuestUsername.id
 	}
-	// } catch (e) {
-	// 	console.log(e)
-	// }
-
 }, "Not found")
 
 export const deleteDocument = catchRecordNotFound(async function ({ sessionId, userId, documentId }: DeleteDocParams, ctx?: Context) {
