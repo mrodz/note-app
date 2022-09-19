@@ -2,7 +2,7 @@ import { Avatar, IconButton, Menu, Tooltip } from "@mui/material"
 import React, { FC, memo } from "react"
 import { LocalStorageSessionInfo } from "../AccountContext"
 import LogoutButton from "./LogoutButton"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 import { LoginTheme } from "./App"
 
 function stringToColor(string: string): {

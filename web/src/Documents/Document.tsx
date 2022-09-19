@@ -28,7 +28,12 @@ import { Link } from "react-router-dom"
 import { memo } from "react"
 import { formatDate, Transition } from "../Dashboard/Dashboard"
 import { post, pushNotification } from "../App/App"
-import { ArrowBackIosNew, Share, DoNotTouch as DoNotTouchIcon, Delete, Info, InfoOutlined, InfoRounded, InfoTwoTone } from "@mui/icons-material"
+import {
+	ArrowBackIosNew,
+	Share,
+	DoNotTouch as DoNotTouchIcon,
+	Delete
+} from "@mui/icons-material"
 import { motion } from "framer-motion"
 import { isUsernameValid } from "../Register/Register"
 import { avatarFromUsername } from "../App/AppHeading"
@@ -160,7 +165,7 @@ export default function UserDocument() {
 			test.current = 0
 			setThrottlePause(false)
 		}, 10_000)
-	}, [documentChange, throttlePause])
+	}, [documentChange, throttlePause, document?.privilege])
 
 	useEffect(() => {
 		const editor = (

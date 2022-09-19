@@ -415,7 +415,7 @@ export default function Dashboard() {
 	 * @param value Optionally, pass in an object of type {@link SubmitSearchProps}
 	 * for special filtering.
 	 */
-	const submitSearch = (value: undefined | SubmitSearchProps = undefined) => {
+	const submitSearch = useCallback((value: undefined | SubmitSearchProps = undefined) => {
 		let filtered: Document[]
 
 		const predicate = doc => doc.title.toLowerCase().includes(searchDocRef.current?.value.toLowerCase())
@@ -434,7 +434,7 @@ export default function Dashboard() {
 			loaded: true,
 			list: filtered
 		})
-	}
+	}, [])
 
 	/**
 	 * Memoized asynchronous function to request a user's documents.
@@ -481,7 +481,7 @@ export default function Dashboard() {
 			data: joined,
 			search: true
 		})
-	}, [user.accountId, user.sessionId])
+	}, [user.accountId, user.sessionId, submitSearch])
 
 	/**
 	 * Open the settings menu and sets the states required to do this.
@@ -507,7 +507,7 @@ export default function Dashboard() {
 		(async () => {
 			await requestDocuments(documentsLoaded)
 		})()
-	}, [requestDocuments])
+	}, [documentsLoaded, requestDocuments])
 
 	/**
 	 * Send a POST request to create a document.
@@ -578,7 +578,7 @@ export default function Dashboard() {
 			// close the modal.
 			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
 		}
-	}, [renameDocRef, settingsOpen, requestDocuments, user.accountId, user.sessionId])
+	}, [renameDocRef, settingsOpen, documentsLoaded, user.accountId, user.sessionId, requestDocuments])
 
 	/**
 	 * Callback function to delete a document.
