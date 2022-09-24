@@ -187,9 +187,6 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 			createdAt: true,
 			preview: true
 		},
-		orderBy: {
-			lastUpdated: 'desc'
-		}
 	}
 
 	let request: Object | undefined = {}
@@ -209,7 +206,17 @@ export const getDocuments = catchRecordNotFound(async function ({ sessionId, use
 	if (query === null)
 		throw new CaughtApiException('Not found')
 
-	return query
+	for (const key in (query as any)?.guestDocuments ?? []) {
+		(query as any).guestDocuments[key]['__GUEST__'] = true
+	}
+
+	let result = Object.values(query).flatMap(d => d).sort((a: Document, b: Document) => {
+		return b.lastUpdated.getTime() - a.lastUpdated.getTime()
+	})
+
+	return {
+		documents: result
+	}
 }, 'Invalid user id')
 
 function validateTitle(title: string): boolean {

@@ -18,9 +18,9 @@ import {
 	Tooltip,
 	Typography
 } from "@mui/material"
-import { useCallback, useContext, useEffect, useRef, useState } from "react"
-import { useNavigate, useParams } from "react-router"
-import { Context } from "../AccountContext"
+import { MutableRefObject, useCallback, useContext, useEffect, useRef, useState } from "react"
+import { NavigateFunction, useNavigate, useParams } from "react-router"
+import { Context, LocalStorageSessionInfo } from "../AccountContext"
 import { CKEditor } from '@ckeditor/ckeditor5-react'
 import Editor from 'ckeditor5-custom-build/build/ckeditor'
 import "./Document.scss"
@@ -56,24 +56,23 @@ const AccessDenied = memo(() => {
 	)
 })
 
-const avatarsFromGuests = (guests: Array<any>, tooltip?: boolean) => guests.map((e, i) => avatarFromUsername(e?.username, { key: i, tooltip: !!tooltip }))
+const avatarsFromGuests = (guests: Array<Types.User>, tooltip?: boolean) => guests.map((e, i) => avatarFromUsername(e?.username, { key: i, tooltip: !!tooltip }))
 
 export default function UserDocument() {
-	const user = useContext(Context)
+	const user: LocalStorageSessionInfo = useContext(Context)
 
-	const [document, setDocument] = useState<any>({})
-	const [throttlePause, setThrottlePause] = useState(false)
+	const [document, setDocument] = useState<Types.Document>(undefined)
+	const [throttlePause, setThrottlePause] = useState<boolean>(false)
 	const [lastSave, setLastSave] = useState(new Date())
-	const [shareModalOpen, setShareModalOpen] = useState(false)
+	const [shareModalOpen, setShareModalOpen] = useState<boolean>(false)
 	const [editor, setEditor] = useState({
 		editor: null
 	})
-	const [loading, setLoading] = useState(true)
+	const [loading, setLoading] = useState<boolean>(true)
 
 	const params = useParams()
-	const navigate = useNavigate()
-
-	const documentRef = useRef(null)
+	const navigate: NavigateFunction = useNavigate()
+	const documentRef: MutableRefObject<any> = useRef(null)
 
 	const loadDoc = useCallback(async () => {
 		return await post.to('/doc/get').send({
@@ -83,8 +82,6 @@ export default function UserDocument() {
 		})
 	}, [params.id, user.accountId, user.sessionId])
 
-	/// BIG ERRROR:
-	/// Access Denied page renders thousands of times
 	useEffect(() => {
 		if (loading) {
 			(async () => {
@@ -146,14 +143,14 @@ export default function UserDocument() {
 		}
 	}, [documentRef.current?.value, documentChange])
 
-	const test = useRef(0)
+	const enqueuedCount: MutableRefObject<number> = useRef(0)
 
 	const documentChangeThrottle = useCallback(async function (cb: (() => void | Promise<void>) = documentChange) {
 		if (document?.privilege !== 2) return
 
 		const waiting = throttlePause
 
-		test.current += 1
+		enqueuedCount.current += 1
 
 		setThrottlePause(true)
 		if (waiting) return
@@ -161,8 +158,8 @@ export default function UserDocument() {
 		cb()
 
 		timeoutRef.current = setTimeout(() => {
-			if (test.current > 1) cb()
-			test.current = 0
+			if (enqueuedCount.current > 1) cb()
+			enqueuedCount.current = 0
 			setThrottlePause(false)
 		}, 10_000)
 	}, [documentChange, throttlePause, document?.privilege])
@@ -180,7 +177,6 @@ export default function UserDocument() {
 		)
 
 		setEditor({ editor: editor })
-
 	}, [document?.content, document?.privilege, documentChange, documentChangeThrottle])
 
 	function dashboardClick() {

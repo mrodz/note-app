@@ -38,6 +38,7 @@ import { post, pushNotification } from '../App/App'
 import sanitizeHtml from 'sanitize-html'
 import AppHeading from '../App/AppHeading'
 import { RemoveRedEye } from '@mui/icons-material'
+import { memo } from 'react'
 
 /**
  * Greets a user according to the time of day.
@@ -89,7 +90,7 @@ function trimString(str: string, limit: number = 127): string {
  * Skeleton placeholder for a document in the dashboard view.
  * @returns A Skeleton to be rendered while documents are loading.
  */
-const Note = () => {
+const Note = memo(() => {
 	return (
 		<div className="Dashboard-Note">
 			<Skeleton variant="rectangular" height="5rem" width="70%"></Skeleton>
@@ -97,7 +98,7 @@ const Note = () => {
 			<Skeleton width="30%"></Skeleton>
 		</div>
 	)
-}
+})
 
 /**
  * A document's title must satisfy:
@@ -200,33 +201,6 @@ const item = {
 }
 /// END @framer-motion animations
 
-export type User = {
-	id: string,
-	username: string,
-	password: string,
-	createdAt: Date,
-	documents: Document[],
-	guestDocuments: Document[],
-	documentCount: number,
-}
-
-export type Session = {
-	id: string,
-	userId: string,
-	activeSessions: number
-}
-
-export type Document = {
-	id: string,
-	title: string,
-	preview?: string,
-	content: string,
-	createdAt: Date,
-	lastUpdated: Date,
-	userId: string
-	guests: User[]
-}
-
 /**
  * # Known issues:
  * - The amount of skeleton documents shown during loading
@@ -243,12 +217,12 @@ export default function Dashboard() {
 
 	type SetSettingsOpen = {
 		open: boolean,
-		document: Document
+		document: Types.Document
 	}
 
 	type SetDocuments = {
 		loaded: boolean,
-		list: Document[]
+		list: Types.Document[]
 	}
 
 	type SetMessages = {
@@ -289,11 +263,93 @@ export default function Dashboard() {
 	const createDocTitleRef: MutableRefObject<HTMLInputElement> = useRef(null)
 	const renameDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
 	const searchDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
-	const originalDocuments: MutableRefObject<Document[]> = useRef([])
+	const originalDocuments: MutableRefObject<Types.Document[]> = useRef([])
 
 	// make it easier to spot other people's documents when
 	// viewing guest documents along with your own
 	const highlightGuests: boolean = documentsLoaded.guest && documentsLoaded.mine
+
+	/**
+	 * Callback function for a click on a note; navigates to the document with
+	 * the specified id. Will always succeed in this context.
+	 */
+	function openDocument(title, id) {
+		pushNotification(`Opening '${title}'`, {
+			variant: 'success',
+			clear: true
+		})
+
+		navigate(`/d/${id}`)
+	}
+
+	/**
+	 * Callback function for a click on a note's settings menu.
+	 * @param event a MouseEvent to be terminated before bubbling.
+	 */
+	function settingsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>, document: Types.Document) {
+		// Ensures clicks to the settings menu do not trigger a new page
+		// load (to the document). It is critical; DO NOT DELETE
+		event.stopPropagation()
+
+		openSettings(document)
+	}
+
+	const DocumentNote = memo((props: {
+		document: Types.Document,
+	}) => {
+		const lastUpdated: string = formatDate(new Date(props.document.lastUpdated))
+		const isGuest = '__GUEST__' in props.document
+
+		return (
+			<motion.div
+				key={props.document.id}
+				className='Dashboard-Note-clickable'
+				variants={item}
+			>
+				<ListItem sx={{ padding: 0, height: '100%', ...(isGuest && highlightGuests) ? { backgroundColor: '#bee6e8' } : {} }} button onClick={() => openDocument(props.document.title, props.document.id)}>
+					<div className="Dashboard-Note">
+						<div className='Dashboard-Note-top'>
+							<div>
+								<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{props.document.title}</Typography>
+								<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+									<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>
+								</div>
+							</div>
+							<div style={{ flexGrow: 1 }}></div>
+							<div>
+								{!isGuest ? (
+									<Tooltip title="More" enterDelay={1000}>
+										<IconButton className="Dashboard-Note-togglesettings" onClick={e => settingsClick(e, props.document)}>
+											<MoreVertIcon />
+										</IconButton>
+									</Tooltip>
+								) : (
+									<Tooltip title="You can only view this document" enterDelay={1000}>
+										<RemoveRedEye />
+									</Tooltip>
+								)}
+							</div>
+						</div>
+						<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
+						<Tooltip title="Preview" placement="top" enterDelay={1000}>
+							<div className="Dashboard-Note-preview">
+								<Typography variant="caption" mr="1rem">
+									<span dangerouslySetInnerHTML={{
+										__html: props.document.preview === null || /^\s*$/.test(props.document.preview)
+											? "<i>Empty Document</i>"
+											: trimString(sanitizeHtml(props.document.preview, {
+												allowedTags: ['b', 'i', 'strong', 'u', 'br', 'p'],
+											}))
+									}} />
+								</Typography>
+							</div>
+						</Tooltip>
+
+					</div>
+				</ListItem>
+			</motion.div>
+		)
+	})
 
 	/**
 	 * Construct an array of notes to display the value returned from the API lookup.
@@ -301,95 +357,15 @@ export default function Dashboard() {
 	 * @param navigate legacy 
 	 * @returns 
 	 */
-	function notesFromDocuments(documents: Document[]): JSX.Element[] {
-		return documents?.map?.(e => {
-			const lastUpdated: string = formatDate(new Date(e.lastUpdated))
-
-			/**
-			 * Callback function for a click on a note; navigates to the document with
-			 * the specified id. Will always succeed in this context.
-			 */
-			function openDocument() {
-				pushNotification(`Opening '${e.title}'`, {
-					variant: 'success',
-					clear: true
-				})
-
-				navigate(`/d/${e.id}`)
-			}
-
-			/**
-			 * Callback function for a click on a note's settings menu.
-			 * @param event a MouseEvent to be terminated before bubbling.
-			 */
-			function settingsClick(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-				// Ensures clicks to the settings menu do not trigger a new page
-				// load (to the document). It is critical; DO NOT DELETE
-				event.stopPropagation()
-
-				openSettings(e)
-			}
-
-			const isGuest = '__GUEST__' in e
-
-			return (
-				<motion.div
-					key={e.id}
-					className='Dashboard-Note-clickable'
-					variants={item}
-				>
-					<ListItem sx={{ padding: 0, height: '100%', ...(isGuest && highlightGuests) ? { backgroundColor: '#bee6e8' } : {} }} button onClick={openDocument}>
-						<div className="Dashboard-Note">
-							<div className='Dashboard-Note-top'>
-								<div>
-									<Typography variant="h6" fontWeight="bold" className="Dashboard-Note-title">{e.title}</Typography>
-									<div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-										<Typography variant="caption" mr="1rem">Last saved {lastUpdated}</Typography>
-									</div>
-								</div>
-								<div style={{ flexGrow: 1 }}></div>
-								<div>
-									{!isGuest ? (
-										<Tooltip title="More" enterDelay={1000}>
-											<IconButton className="Dashboard-Note-togglesettings" onClick={settingsClick}>
-												<MoreVertIcon />
-											</IconButton>
-										</Tooltip>
-									) : (
-										<Tooltip title="You can only view this document" enterDelay={1000}>
-											<RemoveRedEye />
-										</Tooltip>
-									)
-									}
-								</div>
-							</div>
-							<Divider sx={{ marginTop: '1rem', marginBottom: '1rem' }}></Divider>
-							<Tooltip title="Preview" placement="top" enterDelay={1000}>
-								<div className="Dashboard-Note-preview">
-									<Typography variant="caption" mr="1rem">
-										<span dangerouslySetInnerHTML={{
-											__html: e.preview === null || /^\s*$/.test(e.preview)
-												? "<i>Empty Document</i>"
-												: trimString(sanitizeHtml(e.preview, {
-													allowedTags: ['b', 'i', 'strong', 'u', 'br', 'p'],
-												}))
-										}} />
-									</Typography>
-								</div>
-							</Tooltip>
-
-						</div>
-					</ListItem>
-				</motion.div>
-			)
-		})
+	function notesFromDocuments(documents: Types.Document[]): JSX.Element[] {
+		return documents?.map?.(e => <DocumentNote document={e} />)
 	}
 
 	type SubmitSearchProps = {
 		/**
 		 * Data to serve as a replacement from the original documents' titles.
 		 */
-		data: Document | Document[],
+		data: Types.Document | Types.Document[],
 		/**
 		 * Whether or not to apply the predicate
 		 */
@@ -416,7 +392,7 @@ export default function Dashboard() {
 	 * for special filtering.
 	 */
 	const submitSearch = useCallback((value: undefined | SubmitSearchProps = undefined) => {
-		let filtered: Document[]
+		let filtered: Types.Document[]
 
 		const predicate = doc => doc.title.toLowerCase().includes(searchDocRef.current?.value.toLowerCase())
 
@@ -424,9 +400,9 @@ export default function Dashboard() {
 			let data = Array.isArray(value.data) ? value.data : [value.data]
 			filtered = value.search ? data.filter(predicate) : data
 		} else {
-			filtered = (searchDocRef.current?.value?.length > 0
+			filtered = searchDocRef.current?.value?.length > 0
 				? originalDocuments.current.filter(predicate)
-				: originalDocuments.current)
+				: originalDocuments.current
 		}
 
 		// repaint
@@ -467,13 +443,16 @@ export default function Dashboard() {
 			return
 		}
 
-		const mine: Document[] = result.json?.documents ?? []
-		const guest: Document[] = result.json?.guestDocuments ?? []
-		const joined: Document[] = mine.concat(guest)
+		// const mine: Types.Document[] = result.json?.documents ?? []
+		// const guest: Types.Document[] = result.json?.guestDocuments ?? []
+		const joined: Types.Document[] = result.json?.documents
 
-		for (let i = 0; i < guest.length; i++) {
-			guest[i]['__GUEST__'] = true
-		}
+		console.log(joined);
+
+
+		// for (let i = 0; i < joined.length; i++) {
+		// 	if (joined[i].privilege === 1) joined[i]['__GUEST__'] = true
+		// }
 
 		originalDocuments.current = joined
 
@@ -487,7 +466,7 @@ export default function Dashboard() {
 	 * Open the settings menu and sets the states required to do this.
 	 * @param e a document object.
 	 */
-	const openSettings = (e) => {
+	const openSettings = (e: Types.Document) => {
 		setSettingsOpen({ open: true, document: e })
 	}
 
@@ -659,7 +638,7 @@ export default function Dashboard() {
 									// an Autocomplete option from the list.
 									if (r === 'selectOption' && typeof v !== 'string') {
 										submitSearch({
-											data: v as Document,
+											data: v as Types.Document,
 											search: true
 										})
 									}
@@ -832,15 +811,12 @@ export default function Dashboard() {
 							onChange={() => {
 								const text = renameDocRef.current.value
 
-								// possible improvement: lazy evaluation could speed this up
-								const goodLength = text.length !== 0,
-									titlesUnique = text.replace(/^\s+|\s+$|\s(?=\s)/gi, '') !== settingsOpen.document?.title,
-									nonWhiteSpace = !/^\s+$/g.test(text)
+								if (text.length !== 0 && !/^\s+$/g.test(text)
+									&& text.replace(/^\s+|\s+$|\s(?=\s)/gi, '') !== settingsOpen.document?.title) {
 
-								if (goodLength && titlesUnique && nonWhiteSpace) {
 									if (!canRename) setCanRename(true)
-								} else {
-									if (canRename) setCanRename(false)
+								} else if (canRename) {
+									setCanRename(false)
 								}
 							}}
 						/>
