@@ -5,8 +5,7 @@ node_modules
 /.pnp
 .pnp.js
 /api/generated
-/web/generated
-
+/web/generated/ckeditor5-35.1.0-p6fv9v80tfsi/build/
 # testing
 /coverage
 

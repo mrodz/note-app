@@ -1,0 +1,65 @@
+version: '0.1'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+
+    # ALL of these four fields need to match those in ./api/.env
+    ports:
+      - 5432:5432                    # port default
+    environment:                     
+      POSTGRES_USER: postgres        # username default
+      POSTGRES_PASSWORD: postgres    # password default
+      POSTGRES_DB: noteapp           # database default
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: pgadmin
+  #   depends_on:
+  #     - postgres
+  #   ports:
+  #     - "5555:80"
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: pgadmin4@pgadmin.org
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   volumes:
+  #     - pgadmin-data:/var/lib/pgadmin
+  #   restart: unless-stopped
+    
+  nodejs-server:
+    stdin_open: true
+    depends_on:
+      - postgres
+    build:
+      context: ./api
+    links:
+      - "postgres:db"
+    ports:
+      - "5000:5000"
+    container_name: node-api
+    volumes:
+       - ./api:/usr/src/app/api
+       - /usr/src/app/api/node_modules
+    env_file:
+      - api/.env
+    restart: always
+
+  react-ui:
+    depends_on:
+      - nodejs-server
+    build:
+      context: ./web
+    ports:
+      - "3000:3000"
+    container_name: react-ui
+    stdin_open: true
+    volumes:
+       - ./frontend:/usr/src/app/frontend
+       - /usr/src/app/frontend/node_modules
+volumes:
+  postgres-data:
+  pgadmin-data:

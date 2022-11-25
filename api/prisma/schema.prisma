@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../api/generated/client"
+  provider      = "prisma-client-js"
+  output        = "../api/generated/client"
+  binaryTargets = ["native", "linux-musl"] // linux-musl for Docker
 }
 
 datasource db {

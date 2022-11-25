@@ -31,6 +31,8 @@ const messages = {
 	passwordError: "Invalid Password",
 }
 
+const RecordNotFoundError = "P2025"
+
 export async function logoutUser({ userId }, ctx?: Context) {
 	try {
 		const signedOutSession = await (ctx?.prisma ?? prisma).session.delete({
@@ -46,7 +48,7 @@ export async function logoutUser({ userId }, ctx?: Context) {
 			deletedSessionId: signedOutSession.id
 		}
 	} catch (e) {
-		if (e?.code === 'P2025') { // RecordNotFoundError
+		if (e?.code === RecordNotFoundError) { // RecordNotFoundError
 			throw new CaughtApiException('Account is not signed in')
 		} else {
 			throw e

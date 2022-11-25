@@ -1,4 +1,4 @@
-import { CaughtApiException, logger, prisma } from "."
+import { CaughtApiException, prisma } from "."
 import { isValidUsernameChars, isValidUsernameLength } from "./createUser"
 import { Document } from "./generated/client"
 import { Context } from "./singleton"
@@ -9,7 +9,6 @@ export function catchRecordNotFound<T extends Function>(callback: T, message: st
 			return callback(...args)
 		} catch (exception) {
 			console.log('@', exception?.name);
-
 			if (exception?.code === 'P2025' || exception?.name === "NotFoundError") { // RecordNotFoundError
 				throw new CaughtApiException(message)
 			} else {

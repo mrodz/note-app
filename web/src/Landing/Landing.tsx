@@ -2,7 +2,6 @@ import React from "react"
 import './Landing.scss'
 import { motion } from "framer-motion"
 import { Button, Typography } from "@mui/material"
-import { Link } from "react-router-dom"
 
 const items = {
 	inside: {
@@ -28,6 +27,10 @@ const item = {
 	outside: { opacity: 0, x: -100 },
 }
 
+/**
+ * @todo More detailed landing page.
+ * @returns JSX
+ */
 export default React.memo(() => {
 	return (
 		<div className="Landing">

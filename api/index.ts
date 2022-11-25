@@ -3,7 +3,6 @@ import cors from 'cors'
 import winston from 'winston'
 import { PrismaClient } from './generated/client'
 import 'dotenv/config'
-import fetch from 'node-fetch'
 
 // ENDPOINTS
 import createUser, { RegisterParams } from './createUser'
@@ -121,29 +120,7 @@ SERVER: {
 
 	// Hoist the app
 	app.listen(port, async () => {
-		// await prisma.session.deleteMany() // log out all users on server restart -- NOT FOR PRODUCTION
-		// await prisma.document.deleteMany()
-
-		console.log("server started " + port)
-
-		TESTS: {
-			break TESTS // comment this out when you're testing.
-			const req = {
-				sessionId: '7a179ce4-2744-4a4e-beff-c7a8d86efa94',
-				userId: '78e1fe5d-b5c2-4e83-b212-2e61679bc90d',
-				title: 'Lorem!'
-			}
-
-			const response = await fetch('http://localhost:5000/api/create-doc', {
-				method: 'post',
-				body: JSON.stringify(req),
-				headers: { 'Content-Type': 'application/json' }
-			})
-
-			const data = await response.json()
-			console.log('$', data, response.status)
-
-		}
+		logger.info("server started on port " + port)
 	})
 }
 
