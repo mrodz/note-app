@@ -247,9 +247,6 @@ export default function Dashboard() {
 	// toggle the confirm delete menu
 	const [confirmDelete, setConfirmDelete] = useState<boolean>(false)
 
-	// whether the user can rename a document or not. Used in the rename modal.
-	const [canRename, setCanRename] = useState<boolean>(false)
-
 	// which types of documents can the user load
 	const [documentsLoaded, setDocumentsLoaded] = useState<LoadDocInclude>({
 		mine: true,
@@ -261,7 +258,6 @@ export default function Dashboard() {
 
 	// references to TextFields, to get their value atomically.
 	const createDocTitleRef: MutableRefObject<HTMLInputElement> = useRef(null)
-	const renameDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
 	const searchDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
 	const originalDocuments: MutableRefObject<Types.Document[]> = useRef([])
 
@@ -522,42 +518,21 @@ export default function Dashboard() {
 		}
 	}
 
-	/**
-	 * Memoized callback function to rename a document. 
-	 */
-	const renameButton = useCallback(async function () {
-		/// START checks - Validate the title before submitting a POST request.
-		if (!validateTitle(renameDocRef.current.value)) {
-			pushNotification('Cannot set this as a title', { variant: 'error' })
-			return
-		}
+	const hasNoDocuments: boolean = (originalDocuments.current.length === 0 && (documentsLoaded.guest || documentsLoaded.mine))
+	const noneSelected: boolean = !(documentsLoaded.guest || documentsLoaded.mine)
 
-		if (renameDocRef.current.value === settingsOpen.document?.title) {
-			pushNotification('This is already the title!', { variant: 'error' })
-			return
-		}
-		/// END checks
+	const getNoDocumentsMessage: () => string = () => {
+		let message: string = '';
+		let and: string = '' // delimeter for two reasons
 
-		const result = await post.to('/doc/rename').send({
-			sessionId: user.sessionId,
-			userId: user.accountId,
-			title: renameDocRef.current.value,
-			documentId: settingsOpen?.document.id
-		})
+		// message for part 1 (will also add set delimeter if applicable)
+		if (documentsLoaded.guest && (and = '/')) message += "No one has shared a document with you"
+		// message for part 2
+		if (documentsLoaded.mine) message += `${and}You don't have have any documents yet`
 
-		pushNotification(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
-			clear: true,
-			variant: result.ok ? 'success' : 'error',
-			persist: !result.ok
-		})
+		return message
+	}
 
-		if (result.ok) {
-			// re-render the dashboard to include the renamed document.
-			await requestDocuments(documentsLoaded)
-			// close the modal.
-			setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
-		}
-	}, [renameDocRef, settingsOpen, documentsLoaded, user.accountId, user.sessionId, requestDocuments])
 
 	/**
 	 * Callback function to delete a document.
@@ -583,19 +558,123 @@ export default function Dashboard() {
 		}
 	}
 
-	const hasNoDocuments: boolean = (originalDocuments.current.length === 0 && (documentsLoaded.guest || documentsLoaded.mine))
-	const noneSelected: boolean = !(documentsLoaded.guest || documentsLoaded.mine)
+	const InfoMenu = () => {
+		// whether the user can rename a document or not. Used in the rename modal.
+		const [canRename, setCanRename] = useState<boolean>(false)
 
-	const getNoDocumentsMessage: () => string = () => {
-		let message: string = '';
-		let and: string = '' // delimeter for two reasons
+		const renameDocRef: MutableRefObject<HTMLInputElement> = useRef(null)
 
-		// message for part 1 (will also add set delimeter if applicable)
-		if (documentsLoaded.guest && (and = '/')) message += "No one has shared a document with you"
-		// message for part 2
-		if (documentsLoaded.mine) message += `${and}You don't have have any documents yet`
+		/**
+		 * Memoized callback function to rename a document. 
+		 */
+		const renameButton = useCallback(async function () {
+			/// START checks - Validate the title before submitting a POST request.
+			if (!validateTitle(renameDocRef.current.value)) {
+				pushNotification('Cannot set this as a title', { variant: 'error' })
+				return
+			}
 
-		return message
+			if (renameDocRef.current.value === settingsOpen.document?.title) {
+				pushNotification('This is already the title!', { variant: 'error' })
+				return
+			}
+			/// END checks
+
+			const result = await post.to('/doc/rename').send({
+				sessionId: user.sessionId,
+				userId: user.accountId,
+				title: renameDocRef.current.value,
+				documentId: settingsOpen?.document.id
+			})
+
+			pushNotification(result.ok ? `New name: '${result.json.title}'` : `Error: ${result.json.name}`, {
+				clear: true,
+				variant: result.ok ? 'success' : 'error',
+				persist: !result.ok
+			})
+
+			if (result.ok) {
+				// re-render the dashboard to include the renamed document.
+				await requestDocuments(documentsLoaded)
+				// close the modal.
+				setSettingsOpen({ open: false, document: { ...settingsOpen.document, title: result.json.title } })
+			}
+		}, [renameDocRef])
+
+
+		return (
+			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth onClose={closeSettings}>
+				<div className="Dashboard-Note-Settings-top">
+					<DialogTitle>Your Document</DialogTitle>
+					<div style={{ flexGrow: 1 }}></div>
+					<IconButton sx={{ margin: '1rem' }} onClick={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
+						<CloseIcon />
+					</IconButton>
+				</div>
+				<Divider />
+				<List>
+					<ListItem>
+						<ListItemText>
+							Title: {settingsOpen.document?.title ?? '#error'}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Last Edit: {settingsOpen.document?.lastUpdated as unknown as string ?? '#error'}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Created At: {settingsOpen.document?.createdAt as unknown as string ?? '#error'}
+						</ListItemText>
+					</ListItem>
+
+					<ListItem>
+						<ListItemText>
+							Unique Id: {settingsOpen.document?.id ?? '#error'}
+						</ListItemText>
+					</ListItem>
+
+					<Divider />
+					<ListItem>
+						<ListItemIcon>
+							<DriveFileRenameOutlineIcon />
+						</ListItemIcon>
+						<TextField
+							inputRef={renameDocRef} autoFocus variant="standard"
+							defaultValue={settingsOpen.document?.title}
+							onChange={() => {
+								const text = renameDocRef.current.value
+
+								if (text.length !== 0 && !/^\s+$/g.test(text)
+									&& text.replace(/^\s+|\s+$|\s(?=\s)/gi, '') !== settingsOpen.document?.title) {
+
+									if (!canRename) setCanRename(true)
+								} else if (canRename) {
+									setCanRename(false)
+								}
+							}}
+						/>
+						<Button
+							disabled={!canRename}
+							variant="contained"
+							sx={{ marginLeft: '1rem' }}
+							onClick={renameButton}>Rename</Button>
+					</ListItem>
+
+					<ListItem button onClick={() => setConfirmDelete(true)}>
+						<ListItemIcon>
+							<DeleteForeverIcon />
+						</ListItemIcon>
+						<ListItemText>
+							Delete
+						</ListItemText>
+					</ListItem>
+				</List>
+			</Dialog>
+		)
 	}
 
 	return (
@@ -748,6 +827,8 @@ export default function Dashboard() {
 				</>
 			</motion.div>
 
+			<InfoMenu />
+
 			<Dialog open={openCreateDoc} TransitionComponent={Transition} keepMounted onClose={() => setOpenCreateDoc(false)}>
 				<DialogTitle>Create Document</DialogTitle>
 				<DialogContent>
@@ -766,77 +847,7 @@ export default function Dashboard() {
 				</DialogActions>
 			</Dialog>
 
-			<Dialog open={settingsOpen.open} maxWidth="xs" fullWidth onClose={closeSettings}>
-				<div className="Dashboard-Note-Settings-top">
-					<DialogTitle>Your Document</DialogTitle>
-					<div style={{ flexGrow: 1 }}></div>
-					<IconButton sx={{ margin: '1rem' }} onClick={() => setSettingsOpen({ open: false, document: settingsOpen.document })}>
-						<CloseIcon />
-					</IconButton>
-				</div>
-				<Divider />
-				<List>
-					<ListItem>
-						<ListItemText>
-							Title: {settingsOpen.document?.title}
-						</ListItemText>
-					</ListItem>
 
-					<ListItem>
-						<ListItemText>
-							Last Edit: {settingsOpen.document?.lastUpdated?.toUTCString?.()}
-						</ListItemText>
-					</ListItem>
-
-					<ListItem>
-						<ListItemText>
-							Created At: {settingsOpen.document?.createdAt?.toUTCString?.()}
-						</ListItemText>
-					</ListItem>
-
-					<ListItem>
-						<ListItemText>
-							Unique Id: {settingsOpen.document?.id}
-						</ListItemText>
-					</ListItem>
-
-					<Divider />
-					<ListItem>
-						<ListItemIcon>
-							<DriveFileRenameOutlineIcon />
-						</ListItemIcon>
-						<TextField
-							inputRef={renameDocRef} autoFocus variant="standard"
-							defaultValue={settingsOpen.document?.title}
-							onChange={() => {
-								const text = renameDocRef.current.value
-
-								if (text.length !== 0 && !/^\s+$/g.test(text)
-									&& text.replace(/^\s+|\s+$|\s(?=\s)/gi, '') !== settingsOpen.document?.title) {
-
-									if (!canRename) setCanRename(true)
-								} else if (canRename) {
-									setCanRename(false)
-								}
-							}}
-						/>
-						<Button
-							disabled={!canRename}
-							variant="contained"
-							sx={{ marginLeft: '1rem' }}
-							onClick={renameButton}>Rename</Button>
-					</ListItem>
-
-					<ListItem button onClick={() => setConfirmDelete(true)}>
-						<ListItemIcon>
-							<DeleteForeverIcon />
-						</ListItemIcon>
-						<ListItemText>
-							Delete
-						</ListItemText>
-					</ListItem>
-				</List>
-			</Dialog>
 
 			<Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
 				<DialogTitle>Delete "{settingsOpen.document?.title}"</DialogTitle>

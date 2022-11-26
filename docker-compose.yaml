@@ -62,4 +62,4 @@ services:
        - /usr/src/app/frontend/node_modules
 volumes:
   postgres-data:
-  pgadmin-data:
+  # pgadmin-data:

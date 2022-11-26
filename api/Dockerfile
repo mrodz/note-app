@@ -6,9 +6,8 @@ COPY package.json .
 COPY package-lock.json .
 COPY . .
 
-# WORKDIR /api
 RUN npm i
-RUN npx prisma generate
+RUN prisma generate
 
 EXPOSE 5000
-CMD ["npm", "run", "start"]
+CMD ["npm", "start"]

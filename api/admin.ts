@@ -15,7 +15,7 @@ const actions: {
 
 			const result = await prisma.user.delete({
 				where: {
-					id: '183d705d-4abb-4b62-8a4e-bc338cc1ca88'
+					username: username
 				}
 			})
 
