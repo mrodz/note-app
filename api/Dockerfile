@@ -7,7 +7,7 @@ COPY package-lock.json .
 COPY . .
 
 RUN npm i
-RUN prisma generate
+RUN npx prisma generate
 
 EXPOSE 5000
 CMD ["npm", "start"]
