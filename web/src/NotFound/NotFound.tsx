@@ -5,5 +5,10 @@ import React from "react"
  * @returns JSX
  */
 export default function NotFound(): React.ReactElement {
-	return <div>404</div>
+	return (
+		<div>
+			Sorry! This page does not exist :(
+			Code 404
+		</div>
+	)
 }
