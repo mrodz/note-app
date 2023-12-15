@@ -1,14 +1,15 @@
 # Mono repo for a note app
+I built a note-sharing app to learn about databases, webservers, and UI/UX. This project will be archived, because I don't intend on working on it again.
 
-## Meta
+## Tech Stack
 - Front-End: **React**
 - Back-End: **Express + Prisma ORM**
 - Deployment: **Docker**
 
 # Build Info
-To be added later. View `start.ps1` for now.
+Instructions found in powershell script `start.ps1`.
 
-# UX Preview:
+# UI Snapshots:
 
 ## Sign Up Page
 ![signup-1](https://user-images.githubusercontent.com/79176075/204113336-19ec6fef-9566-46a1-99f7-66e8e41728f2.png)
